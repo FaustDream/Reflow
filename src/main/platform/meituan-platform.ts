@@ -4,9 +4,18 @@
  * 美团 App 内有两套订单体系：
  * A. **美团外卖**（`meituan` 适配器，已实现）：`h5.waimai.meituan.com/waimai/mindex/olist`
  * B. **美团平台**（本适配器）：酒店、电影、团购、买菜、打车等综合订单
- *    入口 `https://i.meituan.com/account/order`（综合订单列表）
  *
- * 接口：`https://i.meituan.com/api/poi/order/list`（GET，带 mtgsig 签名，只能被动捕获）
+ * ⚠️ 2026-10-29 实测：**美团 C 端综合订单没有可用的 Web 入口**。
+ *    - 原入口 `https://i.meituan.com/account/order` 已 404（返回「信息未找到」）
+ *    - `i.meituan.com/awp/h5/mine|order/*` 全部 NoSuchKey
+ *    - `www.meituan.com/ordercenterlist` 跳回企业官网首页
+ *    - 大众点评 `m.dianping.com/mine|order/*` 一律「请下载 App」
+ *    - 接口 `i.meituan.com/api/poi/order/list` 在 meituan 域外跨域不可达，
+ *      域内也没有任何页面会去调它
+ *    所以本适配器**只能靠 MITM 被动捕获 App 流量**（App 内订单页才是真数据源）。
+ *    `homeUrl` 指向美团首页仅作登录/占位，不会产生订单。
+ *
+ * 接口（MITM 捕获时匹配）：`https://i.meituan.com/api/poi/order/list`
  * 响应 `{ data: { orderList: [...], hasMore, nextCursor } }`
  *
  * 字段映射（与外卖适配器兼容，复用 `normalizeMeituanOrder`）：
@@ -20,6 +29,7 @@
  * - 类目 `category`（hotel / movie / group / grocery / taxi 等）
  *
  * 与外卖数据合并时按 `orderId` 去重（两套接口可能返回同一订单）。
+ * 账号与美团外卖共用 `persist:platform-meituan`，登录一次即可。
  */
 import type { CaptureReport } from '../../shared/types'
 import type { ParseResult, PlatformAdapter } from './adapter'
@@ -27,8 +37,14 @@ import { type Order, type PageInfo } from '../../shared/types/order'
 import { LOCAL_LIFE_COLUMNS } from './local-life'
 import { normalizeMeituanOrder, type MeituanOrder } from './meituan'
 
-/** 美团综合订单页 */
-export const MEITUAN_PLATFORM_HOME_URL = 'https://i.meituan.com/account/order'
+/**
+ * 打开面板时加载的页面。
+ *
+ * 综合订单没有 Web 入口（见文件头），这里只放一个能正常打开的页面，
+ * 让「打开页面」不至于 404；真正的数据靠 MITM 捕获 App 流量。
+ * 账号与外卖共用分区，所以这里打开也是已登录状态。
+ */
+export const MEITUAN_PLATFORM_HOME_URL = 'https://www.meituan.com/'
 
 const str = (v: unknown): string =>
   typeof v === 'string' || typeof v === 'number' ? String(v) : ''
