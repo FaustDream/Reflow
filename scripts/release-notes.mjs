@@ -53,11 +53,11 @@ process.stdout.write(`${body}
 
 | 你的系统 | 选这个 |
 |---|---|
-| Windows 10/11 | \`回流 Reflow-${version}-win-x64.exe\`（安装包）或 \`-portable.exe\`（免安装） |
-| macOS（Apple Silicon / M 系列） | \`回流 Reflow-${version}-mac-arm64.dmg\` |
-| macOS（Intel） | \`回流 Reflow-${version}-mac-x64.dmg\` |
-| Linux（Debian/Ubuntu） | \`回流 Reflow-${version}-linux-amd64.deb\` |
-| Linux（通用便携） | \`回流 Reflow-${version}-linux-x86_64.AppImage\` 或 \`-linux-x64.tar.gz\` |
+| Windows 10/11 | \`Reflow-${version}-win-x64.exe\`（安装包）或 \`Reflow-${version}-portable.exe\`（免安装） |
+| macOS（Apple Silicon / M 系列） | \`Reflow-${version}-mac-arm64.dmg\` |
+| macOS（Intel） | \`Reflow-${version}-mac-x64.dmg\` |
+| Linux（Debian / Ubuntu） | \`Reflow-${version}-linux-amd64.deb\` |
+| Linux（通用） | \`Reflow-${version}-linux-x86_64.AppImage\`（chmod +x 后直接运行） |
 
 ### 安装提示
 

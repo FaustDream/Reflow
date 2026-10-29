@@ -286,7 +286,7 @@ npm run build:unpack  # 只解包不封装，用来快速验证产物
 
 ```bash
 npx electron-builder --linux tar.gz
-node scripts/fix-linux-tar.mjs "dist-release/回流 Reflow-0.2.0-linux-x64.tar.gz"
+node scripts/fix-linux-tar.mjs "dist-release/Reflow-0.2.0-linux-x64.tar.gz"
 ```
 
 Windows 宿主打出的 tar 不保留可执行位，第二步会把 `reflow` / `chrome-sandbox` /
