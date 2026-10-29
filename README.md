@@ -214,7 +214,7 @@ renderer bundle：JS **478KB**、CSS **128KB** —— Element Plus 按需引入�
 |---|---|---|
 | 宿主 | Electron | 决策 D-E：需要 `webview` + per-webview preload 注入能力 |
 | 构建 | electron-vite 5 + Vite 7 | ⚠ electron-vite@5 **不支持 Vite 8**，勿升级 vite 到 8.x |
-| 打包 | electron-builder + NSIS，**仅 x64** | 决策：不出 32 位（原版京东为 32 位） |
+| 分发 | **不打包**，直接跑源码 | `npm install` + `npm run dev:sw`；改代码即时生效，无安装包 |
 | 前端 | Vue 3 + TypeScript + Element Plus | |
 | 语言 | TypeScript **5.9** | ⚠ vue-tsc 3.x 未适配 TypeScript 7，勿升级 |
 
