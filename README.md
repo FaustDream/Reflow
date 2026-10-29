@@ -316,6 +316,22 @@ Windows 宿主打出的 tar 不保留可执行位，第二步会把 `reflow` / `
   configured correctly`，用 `./reflow --no-sandbox` 启动（Ubuntu 23.10+ 默认禁用了非特权
   user namespace）。
 
+### 发版流程（版本管理）
+
+版本号只有一个来源：`package.json` 的 `version`；发版说明只有一个来源：`docs/CHANGELOG.md`。
+
+1. 改 `package.json` 的 `version`，并在 `docs/CHANGELOG.md` 顶部加一段
+   `## x.y.z（YYYY-MM-DD）`（同时更新文件顶部「当前版本」摘要）
+2. 提交：`git commit -am "release: v0.2.1"`
+3. 打 tag 并推送：`git tag v0.2.1 && git push origin main --tags`
+4. Actions 自动跑完：三平台构建 → 校验 tag 与 `version` 一致 → 从 CHANGELOG 截取发布说明
+   → 生成 `SHA256SUMS.txt` → 创建 Release 并上传全部产物
+
+tag 与 `package.json` 对不上时，构建第一步就会失败，不会发出错位的包；重复跑同一次发布是幂等的
+（Release 已存在则覆盖资产）。
+
+不推 tag 只想拿包：Actions →「打包三平台」→ Run workflow，产物在当次运行的 Artifacts 里，不发版。
+
 ## 目录
 
 ```
