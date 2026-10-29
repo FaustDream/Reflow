@@ -15,6 +15,10 @@
  *    所以本适配器**只能靠 MITM 被动捕获 App 流量**（App 内订单页才是真数据源）。
  *    `homeUrl` 指向美团首页仅作登录/占位，不会产生订单。
  *
+ * 📌 2026-10-29 用户决定：暂时不做美团综合订单，本适配器已加入
+ *    `HIDDEN_PLATFORMS`（界面不显示），代码保留。将来美团若开放 Web 入口、
+ *    或愿意走 MITM 抓 App，把它从隐藏列表移出即可恢复，无需重写。
+ *
  * 接口（MITM 捕获时匹配）：`https://i.meituan.com/api/poi/order/list`
  * 响应 `{ data: { orderList: [...], hasMore, nextCursor } }`
  *
