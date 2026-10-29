@@ -38,6 +38,9 @@ jobs:
       ELECTRON_BUILDER_BINARIES_MIRROR: https://npmmirror.com/mirrors/electron-builder-binaries/
       # 未做代码签名，别让 electron-builder 去找证书
       CSC_IDENTITY_AUTO_DISCOVERY: false
+      # 单测里有「订单时间按本地时区格式化」的断言（写死了 +08:00），
+      # runner 默认是 UTC，不固定时区会差 8 小时
+      TZ: Asia/Shanghai
 
     steps:
       - uses: actions/checkout@v4
