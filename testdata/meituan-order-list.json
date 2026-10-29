@@ -1,0 +1,55 @@
+{
+  "data": {
+    "digestlist": [
+      {
+        "wm_order_id": 2100000000000001,
+        "order_id": 2100000000000001,
+        "poi_name": "合成羊肉炉店（示例）",
+        "poi_pic": "http://p0.meituan.net/farmer/synthetic-poi.png",
+        "product_list": [
+          {
+            "productId": 33900000001,
+            "product_count": 1,
+            "product_name": "合成羊杂粉",
+            "product_pic": "http://p0.meituan.net/xianfu/synthetic-a.png"
+          },
+          {
+            "productId": 33900000002,
+            "product_count": 2,
+            "product_name": "合成小菜",
+            "product_pic": "http://p0.meituan.net/xianfu/synthetic-b.png"
+          }
+        ],
+        "product_total": 22.8,
+        "total": 22.8,
+        "product_count": 3,
+        "status_description": "已完成",
+        "status": 8,
+        "order_time": 1750260311,
+        "logistics_status": 40,
+        "is_self_pick": 0,
+        "estimate_arrival_time": 1750262000,
+        "hash_id": "2100000000000001",
+        "format_order_time": "2026-06-19 10:05",
+        "scheme": "meituanwaimai://waimai.meituan.com/menu?restaurant_id=-100&poi_id_str=synthetic"
+      },
+      {
+        "order_id": 2100000000000002,
+        "poi_name": "合成快餐店",
+        "product_list": [
+          { "product_name": "合成套餐", "product_count": 1, "product_pic": "//p0.meituan.net/xianfu/synthetic-c.png" }
+        ],
+        "product_total": 15,
+        "product_count": 1,
+        "status_description": "配送中",
+        "order_time": 1758400000000,
+        "logistics_status": 10,
+        "is_self_pick": 1
+      }
+    ]
+  },
+  "userId": "880000001",
+  "userName": "合成美团用户",
+  "msg": "success",
+  "status": 200
+}

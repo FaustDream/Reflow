@@ -1,0 +1,110 @@
+{
+  "api": "mtop.idle.web.trade.bought.list",
+  "data": {
+    "items": [
+      {
+        "commonData": {
+          "orderId": 2701862187110041255,
+          "orderIdStr": "990101202605100001",
+          "itemId": "88001001001",
+          "peerUserId": "10001",
+          "blockType": "NONE",
+          "tradeStatusEnum": "trade_success",
+          "orderDetailUrl": "//www.goofish.com/orderDetail?orderId=990101202605100001",
+          "utArgs": {
+            "idleBizCode": "6",
+            "_F_idle_pd": "c2c",
+            "globalBizCode": null,
+            "xGlobalBizCode": null
+          }
+        },
+        "head": {
+          "render": "head",
+          "data": {
+            "createTime": "2026-05-10 12:30:00",
+            "statusViewMsg": "交易成功",
+            "userInfo": {
+              "userId": "10001",
+              "userNick": "测试卖家甲",
+              "userIcon": "https://img.example.com/avatar/10001.png",
+              "jumpUrl": "fleamarket://personalPage?userId=10001",
+              "redFlowerIcon": "false",
+              "tags": []
+            }
+          }
+        },
+        "content": {
+          "render": "content",
+          "data": {
+            "detailInfo": {
+              "auctionTitle": "合成测试商品甲 95新",
+              "auctionPic": "http://img.example.com/item/88001001001.jpg?x-oss-process=test",
+              "orderTags": [],
+              "fromWxMiniProgram": "false"
+            },
+            "priceInfo": {
+              "price": "320.00",
+              "buyAmount": "1",
+              "auctionPriceDesc": "实付款"
+            }
+          }
+        },
+        "tail": { "render": "tail", "data": { "btnList": [] } }
+      },
+      {
+        "commonData": {
+          "orderId": "990101202605110002",
+          "itemId": "88001001002",
+          "peerUserId": "10002",
+          "blockType": "NONE",
+          "tradeStatusEnum": "trade_wait_seller_send",
+          "utArgs": { "idleBizCode": "2", "_F_idle_pd": "c2c" }
+        },
+        "head": {
+          "render": "head",
+          "data": {
+            "createTime": "2026-05-11 09:05:00",
+            "statusViewMsg": "等待卖家发货",
+            "userInfo": { "userId": "10002", "userNick": "测试卖家乙" }
+          }
+        },
+        "content": {
+          "render": "content",
+          "data": {
+            "detailInfo": {
+              "auctionTitle": "合成测试商品乙 全新未拆",
+              "auctionPic": "https://img.example.com/item/88001001002.jpg_220x10000Q90.jpg"
+            },
+            "priceInfo": { "price": "45.50", "buyAmount": "2", "auctionPriceDesc": "实付款" }
+          }
+        },
+        "tail": { "render": "tail", "data": { "btnList": [] } }
+      },
+      {
+        "commonData": { "orderIdStr": "990101202605120003", "itemId": "88001001003" },
+        "head": {
+          "render": "head",
+          "data": {
+            "createTime": 1747022400000,
+            "statusViewMsg": "已完成",
+            "userInfo": { "userId": "10003", "userNick": "测试卖家丙" }
+          }
+        },
+        "content": {
+          "render": "content",
+          "data": {
+            "detailInfo": { "auctionTitle": "合成测试商品丙", "auctionPic": "" },
+            "priceInfo": { "price": "12.00", "buyAmount": "1" }
+          }
+        }
+      }
+    ],
+    "lastEndRow": "30",
+    "nextPage": "true",
+    "resultExt": {},
+    "totalCount": "0"
+  },
+  "ret": ["SUCCESS::调用成功"],
+  "traceId": "synthetic-fixture-sanitized",
+  "v": "1.0"
+}

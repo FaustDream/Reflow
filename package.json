@@ -1,0 +1,46 @@
+{
+  "name": "reflow",
+  "productName": "回流 Reflow",
+  "version": "0.1.0",
+  "description": "把散落在各电商平台的订单数据回流到你自己手上",
+  "main": "./out/main/index.js",
+  "author": "reflow",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "dev:demo": "node scripts/dev-demo.mjs",
+    "dev:sw": "electron-vite dev -- --no-sandbox --disable-gpu --disable-gpu-sandbox --use-gl=swiftshader --use-angle=swiftshader",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:preload": "tsc --noEmit -p tsconfig.preload.json",
+    "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:preload && npm run typecheck:web",
+    "test": "vitest run",
+    "icon": "electron scripts/make-icon.cjs",
+    "shortcut": "electron scripts/make-shortcut.cjs"
+  },
+  "dependencies": {
+    "@electron-toolkit/preload": "^3.0.2",
+    "@electron-toolkit/utils": "^4.0.0",
+    "@element-plus/icons-vue": "^2.3.2",
+    "@jsquash/jpeg": "^1.6.0",
+    "@jsquash/webp": "^1.5.0",
+    "electron-updater": "^6.8.9",
+    "exceljs": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "electron": "^44.7.0",
+    "electron-vite": "^5.0.0",
+    "element-plus": "^2.14.7",
+    "pinia": "^4.0.3",
+    "typescript": "~5.9.3",
+    "unplugin-auto-import": "^21.1.0",
+    "unplugin-vue-components": "^32.1.0",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.4",
+    "vue": "^3.5.43",
+    "vue-tsc": "^3.3.13"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "api": "mtop.idle.web.trade.order.detail",
+  "ret": ["SUCCESS::调用成功"],
+  "data": {
+    "orderId": "990101202605100001",
+    "itemId": "88001001001",
+    "peerUserId": "10001",
+    "status": "交易成功",
+    "commonInfo": {},
+    "components": [
+      {
+        "render": "orderStatusVO",
+        "data": { "title": "交易成功" }
+      },
+      {
+        "render": "userGuideVO",
+        "data": {}
+      },
+      {
+        "render": "orderInfoVO",
+        "data": {
+          "orderInfoList": [
+            { "title": "订单编号", "value": "990101202605100001", "copyable": "true" },
+            { "title": "交易快照", "value": "发生交易争议时，可作为判断依据" },
+            { "title": "支付宝交易号", "value": "2026051022001128031449000001", "copyable": "true" },
+            { "title": "收货地址", "value": "合成收货人 13800000001 北京市朝阳区合成路1号" },
+            { "title": "卖家昵称", "value": "合成卖家甲" },
+            { "title": "下单时间", "value": "2026-05-10 12:30:00" },
+            { "title": "付款时间", "value": "2026-05-10 12:30:15" },
+            { "title": "发货时间", "value": "2026-05-11 09:00:00" },
+            { "title": "成交时间", "value": "2026-05-14 18:20:30" }
+          ],
+          "priceInfo": {
+            "billList": [
+              { "code": "ITEM_TOTAL_FEE", "title": "商品总价", "value": "320.00" },
+              { "code": "POST_FEE", "title": "运费", "value": "0.00" },
+              { "title": "闲鱼币抵扣", "value": "-0.10" }
+            ]
+          }
+        }
+      },
+      {
+        "render": "serviceVO",
+        "data": {}
+      }
+    ]
+  },
+  "v": "1.0"
+}
