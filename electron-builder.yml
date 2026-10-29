@@ -43,6 +43,10 @@ asar: true
 asarUnpack:
   - node_modules/@jsquash/**
 
+# macOS 没有开发者证书时，打完包用 codesign 做一次 ad-hoc 签名：
+# arm64 上完全没签名的 .app 会被判「已损坏」，ad-hoc 就够启动
+afterPack: scripts/mac-adhoc-sign.cjs
+
 # ---------------------------------------------------------------- Windows
 win:
   icon: build/icons/reflow.ico
