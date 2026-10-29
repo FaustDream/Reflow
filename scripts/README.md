@@ -1,7 +1,7 @@
 # 自检脚本
 
-这些脚本用于**在真实 Electron 环境**中验证难以用单测覆盖的部分（IPC、窗口、真实网络）。
-不是常规 CI 的一部分，手动运行。
+这些脚本用于**在真实 Electron 环境**中验证难以用单测覆盖的部分（IPC、窗口、真实网络），
+以及打包/发版链路上的辅助步骤。前者手动运行，后者由 `.github/workflows/build.yml` 调用。
 
 | 脚本 | 用途 |
 |---|---|
@@ -11,6 +11,11 @@
 | `features-check.cjs` | 验证缓存持久化、诊断快照（含敏感字段泄漏检查）、自动翻页按钮 |
 | `round2-check.cjs` | 验证多账号（分区隔离/切换/重命名/删除）、CSV 带 BOM、多 Sheet 导出 |
 | `release.mjs` | 发布检查：PII 门禁（testdata/xlsx 不进包）→ 产物 SHA256 → 体积预算 → 更新清单生成 |
+| `release-notes.mjs <版本>` | 从 `docs/CHANGELOG.md` 截取该版本段落，生成 GitHub Release 的说明正文（CI 用） |
+| `fix-linux-tar.mjs <tar.gz>` | 修 Windows 宿主打出的 Linux tar：直接改 tar 头 mode，给 `reflow`/`chrome-sandbox` 置 0755（CI 用） |
+| `mac-adhoc-sign.cjs` | electron-builder 的 `afterPack` 钩子：没有开发者证书时给 `.app` 做 ad-hoc 签名（arm64 无签名会被判「已损坏」） |
+| `make-icon.cjs` | 由 SVG 离屏渲染生成多尺寸 PNG（含 `<N>x<N>.png`）与 `reflow.ico` |
+| `make-shortcut.cjs` | 重建桌面/开始菜单快捷方式（走 Electron `shell.writeShortcutLink`） |
 | `export-ipc-check.cjs` | 走真实导出 IPC，分别验证「导出本平台」与「导出全部」，读回 xlsx 校验行列与表头唯一性 |
 | `gen-mitm-certs.mjs` | 构建期生成 MITM 的 CA 与叶子证书（SAN 覆盖 10 个订单域名）→ `resources/mitm/` |
 | `mitm-spike.mjs` | MITM 可行性验证：本机起 TLS 代理 + curl 自测；`--install/--restore` 改/还原系统代理与证书 |
