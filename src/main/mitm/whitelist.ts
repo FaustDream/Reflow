@@ -13,7 +13,10 @@ export const MITM_HOSTS = [
   'h5api.m.goofish.com',
   'h5api.m.taobao.com',
   'mobile.yangkeduo.com',
-  'wx.waimai.meituan.com'
+  'wx.waimai.meituan.com',
+  // 美团综合订单（酒店/电影/团购/买菜）：没有 Web 入口，只能从 App 流量里被动捕获。
+  // 加了这里必须同步 gen-mitm-certs.mjs 的 HOSTS 并重新生成证书，否则 SAN 不匹配。
+  'i.meituan.com'
 ] as const
 
 /** 是否属于解密范围（含子域名） */

@@ -33,7 +33,9 @@ const HOSTS = [
   'app.dewu.com',
   'open.kwaixiaodian.com',
   'waimai-guide.ele.me',
-  'wx.waimai.meituan.com'
+  'wx.waimai.meituan.com',
+  // 美团综合订单（App 内才有），与 src/main/mitm/whitelist.ts 保持一致
+  'i.meituan.com'
 ]
 
 const force = process.argv.includes('--force')
