@@ -179,8 +179,11 @@
 
 ## 包体积
 
-renderer bundle：JS **478KB**、CSS **128KB** —— Element Plus 按需引入（unplugin-vue-components）。
-安装包预算 95MB（001 骨架实测 88.42MB，超预算时 `record-artifacts.mjs` 以非零码退出）。
+renderer bundle：JS **511KB**、CSS **141KB** —— Element Plus 按需引入（unplugin-vue-components）。
+
+打包后实测（v0.2.0，electron 44.7）：`app.asar` **21.5MB**（exceljs + @jsquash wasm 占大头）、
+NSIS 安装包 **114.7MB**、免安装版 **114.4MB**、Linux tar.gz **129.7MB**。
+体积预算 130MB，超了 `scripts/release.mjs` 会以非零码退出。
 
 ## 首次启动引导
 
@@ -214,7 +217,7 @@ renderer bundle：JS **478KB**、CSS **128KB** —— Element Plus 按需引入�
 |---|---|---|
 | 宿主 | Electron | 决策 D-E：需要 `webview` + per-webview preload 注入能力 |
 | 构建 | electron-vite 5 + Vite 7 | ⚠ electron-vite@5 **不支持 Vite 8**，勿升级 vite 到 8.x |
-| 分发 | **不打包**，直接跑源码 | `npm install` + `npm run dev:sw`；改代码即时生效，无安装包 |
+| 分发 | electron-builder 26 | Windows / macOS / Linux 三平台，产物在 `dist-release/` |
 | 前端 | Vue 3 + TypeScript + Element Plus | |
 | 语言 | TypeScript **5.9** | ⚠ vue-tsc 3.x 未适配 TypeScript 7，勿升级 |
 
@@ -252,9 +255,8 @@ npm run icon         # 重新生成应用图标（build/icons/reflow.ico，多�
 npm run shortcut     # 重建桌面 / 开始菜单快捷方式（带图标）
 ```
 
-**本项目不做打包**（2026-10-27 起移除了 `electron-builder` 与全部构建脚本）。
-唯一的启动入口是根目录的 `launch.js`：它用 `electron-vite dev` 直接跑源码，
-改代码即时生效，不产生安装包。
+开发态启动入口是根目录的 `launch.js`：它用 `electron-vite dev` 直接跑源码，
+改代码即时生效，不需要先构建。
 
 桌面快捷方式「回流 Reflow」指向 `electron.exe launch.js`：`electron.exe` 是 GUI 子系统
 程序不会弹控制台，`launch.js` 以 Electron 主进程身份运行、**不建窗口**，只负责拉起 dev
@@ -264,8 +266,55 @@ server 并常驻，用户关掉应用后它自己退出。
 > （`"D:\reflow\reflow\启动.js"` 存进去后「启动」两个字丢失、双击毫无反应），
 > 所以快捷方式必须指向 ASCII 路径。
 
-`out/` 是 Vite 在开发模式下编译主进程/preload 的**运行时产物**（每次启动自动重建），
-不是安装包，删掉也会自己长回来。
+`out/` 是 electron-vite 的构建产物目录：开发时由 vite 现编主进程/preload，
+`npm run build` 会产出可分发版本（含 `out/renderer`），删掉都会自己长回来。
+
+## 打包（三平台）
+
+产物统一落在 `dist-release/`（已 gitignore）。
+
+```bash
+npm run build:win     # Windows：NSIS 安装包 + 免安装 portable
+npm run build:mac     # macOS：dmg + zip（x64 / arm64）
+npm run build:linux   # Linux：AppImage + deb
+npm run build:unpack  # 只解包不封装，用来快速验证产物
+```
+
+⚠ **macOS 的 .app/.dmg 只能在 macOS 上构建**（electron-builder 会直接拒绝：
+`Build for macOS is supported only on macOS`）；Linux 的 AppImage 需要 Linux 侧的
+`mksquashfs`。在 Windows 上能完整打出的只有 Windows 包，以及 Linux 的 `tar.gz` 便携包：
+
+```bash
+npx electron-builder --linux tar.gz
+node scripts/fix-linux-tar.mjs "dist-release/回流 Reflow-0.2.0-linux-x64.tar.gz"
+```
+
+Windows 宿主打出的 tar 不保留可执行位，第二步会把 `reflow` / `chrome-sandbox` /
+`chrome_crashpad_handler` 改成 0755 —— 不做这步，Linux 上解压后双击毫无反应。
+
+要在非 macOS 机器上出 mac/Linux 原生产物，用仓库里的 GitHub Actions：
+`.github/workflows/build.yml`（Actions → 打包三平台 → Run workflow），
+三个 runner 分别产出 win/mac/linux，产物在当次运行的 Artifacts 里。
+
+### 打包时容易踩的坑
+
+- **`files` 里不要排除 `node_modules/**/doc/**`**：exceljs 的模块就叫
+  `exceljs/lib/doc/workbook.js`，排掉之后主进程 `require('exceljs')` 直接崩 ——
+  表现是双击后只弹一个 "Error" 对话框、主窗口根本不出现。
+- **国内网络**：electron 与 electron-builder 的二进制默认走 GitHub，拉不动时设
+  `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/` 与
+  `ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/`。
+- **MITM 证书**：`resources/mitm/*.key` 不入库，打包前若没有就先跑
+  `node scripts/gen-mitm-certs.mjs`，否则装出来的包「工具 → 抓取通道（MITM）」装不了证书
+  （WebView 注入通道不受影响，抓取照常）。
+- **未签名**：Windows 首次运行会弹 SmartScreen「Windows 已保护你的电脑」→ 更多信息 → 仍要运行；
+  macOS 首次打开要右键「打开」，或执行
+  `xattr -dr com.apple.quarantine "/Applications/回流 Reflow.app"`。
+- **MITM 只有 Windows 实现**：macOS / Linux 上改系统代理与装根证书需要提权，
+  与「不要管理员权限」的约束冲突，界面上会直接显示不支持；抓取与导出照常可用。
+- **Linux 沙箱**：解压 tar.gz 后若报 `The SUID sandbox helper binary was found, but is not
+  configured correctly`，用 `./reflow --no-sandbox` 启动（Ubuntu 23.10+ 默认禁用了非特权
+  user namespace）。
 
 ## 目录
 

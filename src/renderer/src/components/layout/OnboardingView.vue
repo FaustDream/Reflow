@@ -60,6 +60,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { isHiddenPlatform } from '@shared/platform-visibility'
 
 const emit = defineEmits<{ (e: 'done'): void }>()
 
@@ -87,8 +88,9 @@ async function finish(platforms: string[]): Promise<void> {
 
 onMounted(async () => {
   const list = await window.api.getAdapters().catch(() => [])
+  // 用统一的可见性表，别再手写一份 id 清单（否则下架平台会漏在这里）
   allPlatforms.value = list
-    .filter((a) => !['mock', 'xianyu-sold'].includes(a.id))
+    .filter((a) => !isHiddenPlatform(a.id))
     .map((a) => ({ id: a.id, displayName: a.displayName }))
 })
 </script>

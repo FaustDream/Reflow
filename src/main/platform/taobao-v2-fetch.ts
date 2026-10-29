@@ -162,6 +162,12 @@ export function toOrderFromMain(m: Record<string, unknown>): Order {
     return Number.isFinite(n) ? sum + n : sum
   }, 0)
 
+  // `extra.bizType` 是淘宝官方的业务类型：5000 = 本地生活（外卖/闪购），200 = 普通实物。
+  // 总览页要靠它把外卖拆成独立分组，所以必须落盘 —— 只靠标题特征会漏掉
+  // 「手撕半只荷叶鸡+米饭」这类没有 -默认 后缀、店铺名又为空的单。
+  const extra = (m.extra ?? {}) as Record<string, unknown>
+  const bizType = extra.bizType === undefined || extra.bizType === null ? '' : String(extra.bizType)
+
   return {
     ...emptyOrder('taobao'),
     orderId: String(m.id ?? orderInfo.id ?? ''),
@@ -173,7 +179,8 @@ export function toOrderFromMain(m: Record<string, unknown>): Order {
     createdAt: toDateTimeString(String(orderInfo.createTime ?? orderInfo.createDay ?? '')),
     shopName: String(seller.shopName ?? seller.nick ?? ''),
     status: String(statusInfo.text ?? ''),
-    platform: 'taobao'
+    platform: 'taobao',
+    extra: bizType ? { bizType } : {}
   }
 }
 

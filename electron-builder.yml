@@ -1,0 +1,109 @@
+# electron-builder 打包配置（Windows / macOS / Linux 三平台）
+#
+# 产物统一落在 dist-release/（已在 .gitignore 里，release.mjs 也认这个目录）。
+# 运行方式：
+#   npm run build:win     → Windows 安装包 + 免安装版
+#   npm run build:mac     → macOS dmg + zip（需在 macOS 上执行）
+#   npm run build:linux   → Linux AppImage + deb（需在 Linux 上执行）
+#
+# 关键约束：本项目是 electron-vite 三进程结构，renderer 必须由 `electron-vite build`
+# 产出到 out/renderer（dev 下走 vite dev server，直接 electron . 会白屏）。
+appId: com.reflow.app
+productName: 回流 Reflow
+copyright: Copyright © 2026 Reflow
+
+# 不做在线更新（electron-updater 只是历史依赖，主进程没用到），
+# 不生成 app-update.yml / latest.yml，避免被误当成自动更新源。
+publish: null
+
+directories:
+  buildResources: build
+  output: dist-release
+
+# 只打运行期真正需要的东西：
+# - out/**            主进程 / preload / renderer 的构建产物
+# - resources/mitm    MITM 内置证书（certs.ts 从 app.asar/resources/mitm 读）
+# - package.json      electron 入口与版本号
+# 源码、testdata、docs、scripts 一律不进包（避免 PII 与体积膨胀）
+files:
+  - out/**/*
+  - resources/mitm/ca.crt
+  - resources/mitm/leaf.crt
+  - resources/mitm/leaf.key
+  - package.json
+  - '!**/*.map'
+
+# 注意：不要在这里排除 node_modules 下的 doc/ 目录。
+# exceljs 的模块就叫 node_modules/exceljs/lib/doc/workbook.js，
+# 一条 `**/doc/**` 就会把它剔掉，主进程 require('exceljs') 直接崩（已踩过一次）。
+
+# 生产依赖（exceljs / @jsquash / electron-updater 等）由 electron-builder 自动收集；
+# @jsquash 的 wasm 与 ESM 入口用 fs / 动态 import 读，解包到 asar 外最稳。
+asar: true
+asarUnpack:
+  - node_modules/@jsquash/**
+
+# ---------------------------------------------------------------- Windows
+win:
+  icon: build/icons/reflow.ico
+  requestedExecutionLevel: asInvoker
+  artifactName: ${productName}-${version}-win-${arch}.${ext}
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 回流 Reflow
+  # 卸载时保留订单缓存与登录态（用户数据不该被安装器删掉）
+  deleteAppDataOnUninstall: false
+
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
+
+# ---------------------------------------------------------------- macOS
+mac:
+  icon: build/icons/icon-1024.png
+  category: public.app-category.productivity
+  # 未做代码签名与公证：首次打开需右键「打开」，或执行
+  #   xattr -dr com.apple.quarantine "/Applications/回流 Reflow.app"
+  # 有开发者证书后把 identity 删掉、并打开 hardenedRuntime + notarize 即可
+  identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+
+dmg:
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+
+# ---------------------------------------------------------------- Linux
+linux:
+  icon: build/icons
+  category: Office
+  executableName: reflow
+  synopsis: 多平台订单聚合与导出
+  description: 把散落在淘宝、京东、拼多多、闲鱼等平台的订单回流到本机，统一查看与导出。
+  maintainer: FaustDream <FaustDream@users.noreply.github.com>
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  desktop:
+    entry:
+      Name: 回流 Reflow
+      Comment: 多平台订单聚合与导出
+      Categories: Office;Utility;

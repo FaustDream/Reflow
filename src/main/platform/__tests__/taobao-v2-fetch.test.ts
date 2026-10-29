@@ -77,4 +77,14 @@ describe('淘宝 v2 抓取：mainOrders → Order', () => {
     expect(o.paidAmount).toBe('')
     expect(o.quantity).toBeNull()
   })
+
+  it('落盘 extra.bizType：总览页靠它把外卖拆成独立分组', () => {
+    // 5000 = 本地生活（外卖/闪购），200 = 普通实物
+    const local = toOrderFromMain({ ...normal, extra: { bizType: 5000 } })
+    expect(local.extra.bizType).toBe('5000')
+    const shop = toOrderFromMain({ ...normal, extra: { bizType: 200 } })
+    expect(shop.extra.bizType).toBe('200')
+    // 接口没给 bizType 时留空对象，不要塞 undefined
+    expect(toOrderFromMain(normal).extra).toEqual({})
+  })
 })

@@ -36,12 +36,40 @@ export function getPlatformLoginStates(): Record<string, PlatformLoginSnapshot> 
   return Object.fromEntries(loginStates)
 }
 
-const safeDecode = (v: string): string => {
+/**
+ * 昵称 Cookie 解码。
+ *
+ * 淘宝把昵称存成 `%5Cu58A8%5Cu8FF9%5Cu9519%5Cu54AF%5Cu548C` ——
+ * 先 URL 解码得到 `\u58A8\u8FF9…` 这样的**字面量**，再按 Unicode 转义还原才是中文。
+ * 只做 decodeURIComponent 的话，界面上会显示成一串 `\u58A8…`，看着就像「没有昵称」。
+ */
+const decodeEscapedUnicode = (v: string): string =>
+  v.replace(/\\u([0-9a-fA-F]{4})/g, (_m, hex: string) =>
+    String.fromCharCode(parseInt(hex, 16))
+  )
+
+export const decodeNickname = (v: string): string => {
+  if (!v) return ''
+  let out = v
   try {
-    return decodeURIComponent(v)
+    out = decodeURIComponent(out)
   } catch {
-    return v
+    // 不是合法的百分号编码，保留原值
   }
+  return decodeEscapedUnicode(out)
+}
+
+/** 按顺序取第一个非空的昵称 Cookie */
+const pickNickname = (
+  all: Array<{ name: string; value: string }>,
+  names: string[] | undefined
+): string => {
+  if (!names?.length) return ''
+  for (const name of names) {
+    const hit = all.find((c) => c.name === name)?.value
+    if (hit) return decodeNickname(hit)
+  }
+  return ''
 }
 
 export function watchCookieLogin(
@@ -73,7 +101,7 @@ export function watchCookieLogin(
           const get = (name?: string): string =>
             name ? all.find((c) => c.name === name)?.value ?? '' : ''
           const userId = get(login.userIdCookie)
-          const nickname = safeDecode(get(login.nicknameCookie))
+          const nickname = pickNickname(all, login.nicknameCookies)
           loginStates.set(adapter.id, { loggedIn: true, userId, nickname })
           emit({
             platform: adapter.id,

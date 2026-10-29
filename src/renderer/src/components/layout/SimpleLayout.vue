@@ -39,42 +39,66 @@
       <el-aside width="240px" class="sidebar">
         <div class="sidebar-head">
           <span>平台</span>
-          <span class="sidebar-total">{{ platforms.length }} 个</span>
+          <span class="sidebar-total">{{ allRows.length }} 个</span>
         </div>
         <div class="platform-list">
-          <!-- 用 div 而非 button：里面还要放一个「重新加载」小按钮，button 不能嵌套 -->
+          <!--
+            总览入口固定在列表最上方：它统计的是**全部平台**的数据，
+            所以不参与下面的「显示哪些平台」过滤，也不随平台切换消失。
+          -->
           <div
-            v-for="p in platforms"
-            :key="p.id"
-            class="platform-item"
-            :class="{ active: activeId === p.id }"
+            class="platform-item overview-item"
+            :class="{ active: isOverview }"
             role="button"
             tabindex="0"
-            @click="selectPlatform(p.id)"
-            @keydown.enter="selectPlatform(p.id)"
+            @click="selectPlatform(OVERVIEW_ID)"
+            @keydown.enter="selectPlatform(OVERVIEW_ID)"
           >
-            <span class="platform-avatar" :class="{ 'is-off': !p.loggedIn }">
-              {{ initialOf(p.displayName) }}
-            </span>
-            <span class="platform-name">{{ p.displayName }}</span>
-            <span class="platform-meta" :class="{ 'has-orders': p.count > 0 }">
-              {{ p.count > 0 ? `${p.count} 单` : '—' }}
-            </span>
-            <el-icon
-              class="platform-reload"
-              :class="{ spinning: !!reloading[p.id] }"
-              :title="`重新加载${p.displayName}订单（后台进行，不影响其他平台）`"
-              @click.stop="reloadPlatform(p.id)"
-            >
-              <Refresh />
-            </el-icon>
-            <span class="platform-dot" :class="p.loggedIn ? 'is-on' : 'is-off'" />
+            <el-icon class="overview-icon"><DataAnalysis /></el-icon>
+            <span class="platform-name">数据总览</span>
+            <span class="platform-meta has-orders">{{ visibleTotal }} 单</span>
           </div>
+          <div class="list-divider" />
+
+          <!-- 用 div 而非 button：里面还要放一个「重新加载」小按钮，button 不能嵌套 -->
+          <template v-for="(p, idx) in allRows" :key="p.id">
+            <div v-if="idx === 0" class="group-head">网购</div>
+            <div v-if="localRows.length && idx === platforms.length" class="group-head">外卖</div>
+            <div
+              class="platform-item"
+              :class="{ active: activeId === p.id }"
+              role="button"
+              tabindex="0"
+              @click="selectPlatform(p.id)"
+              @keydown.enter="selectPlatform(p.id)"
+            >
+              <span class="platform-avatar" :class="{ 'is-off': !p.loggedIn }">
+                {{ initialOf(p.displayName) }}
+              </span>
+              <span class="platform-name">{{ p.displayName }}</span>
+              <span class="platform-meta" :class="{ 'has-orders': p.count > 0 }">
+                {{ p.count > 0 ? `${p.count} 单` : '—' }}
+              </span>
+              <!-- 外卖栏没有独立抓取：点刷新等于重新抓母平台（淘宝/京东） -->
+              <el-icon
+                class="platform-reload"
+                :class="{ spinning: !!reloading[reloadTargetOf(p.id)] }"
+                :title="`重新加载${p.displayName}订单（后台进行，不影响其他平台）`"
+                @click.stop="reloadPlatform(reloadTargetOf(p.id))"
+              >
+                <Refresh />
+              </el-icon>
+              <span class="platform-dot" :class="p.loggedIn ? 'is-on' : 'is-off'" />
+            </div>
+          </template>
         </div>
       </el-aside>
 
       <!-- 右侧：当前平台的一张表 + 筛选条 -->
       <el-main class="content">
+        <!-- 总览页：跨平台聚合的年 / 月 / 日图表，不参与单平台表格的筛选与导出 -->
+        <OverviewPane v-if="isOverview" :platform-ids="visiblePlatformIds" />
+        <template v-else>
         <div class="content-head">
           <span class="content-title">{{ active?.displayName ?? '—' }}</span>
           <!-- 闲鱼买/卖视角切换（两个视角共用登录态与页面） -->
@@ -87,6 +111,11 @@
             原版魔猫的主窗口本身就是内嵌浏览器，登录页就是主界面，不存在「先打开页面」这一步；
             我们把页面做成了可收起的侧栏，所以登录动作要自己把页面打开并跳到登录页。
           -->
+          <!-- 外卖栏没有自己的登录/页面：统一借用母平台（淘宝/京东） -->
+          <el-tag v-if="isLocalView(activeId)" size="small" type="warning" effect="plain">
+            外卖单来自{{ localBaseName }} · 登录与抓取请到「{{ localBaseName }}」
+          </el-tag>
+          <template v-else>
           <el-dropdown v-if="login.loggedIn" trigger="click" @command="onAccountMenu">
             <el-tag size="small" type="success" effect="plain" class="account-tag">
               {{ login.nickname || login.userId || '已登录' }}
@@ -138,6 +167,7 @@
           >
             {{ scrollRunning ? `停止翻页（${scrollSteps}）` : '后台翻页' }}
           </el-button>
+          </template>
         </div>
 
         <!-- 抓取进度：原版是「页面就在眼前」，这里补一条明确的状态，避免以为没在抓 -->
@@ -212,15 +242,16 @@
           :empty-text="emptyText"
           @selection-change="onSelectionChange"
         />
+        </template>
       </el-main>
 
       <!--
         平台页面（原版作法：页面就在界面上，边逛边抓）。
         收起时不卸载 webview —— 缩成 1px 继续跑，登录态与被动捕获不断。
       -->
-      <div class="page-pane" :class="{ collapsed: !pageShown }">
-        <div v-if="pageShown" class="page-pane-head">
-          <span class="page-pane-title">{{ active?.displayName }} 页面</span>
+      <div class="page-pane" :class="{ collapsed: !pageShown || isOverview || isLocalView(activeId) }">
+        <div v-if="pageShown && !isLocalView(activeId)" class="page-pane-head">
+          <span class="page-pane-title">{{ pageTarget?.displayName }} 页面</span>
           <el-tag v-if="captureRunning" size="small" type="warning" effect="plain">后台抓取中</el-tag>
           <!--
             登录只存在于「打开页面」之后：未登录时在这里扫码，或直接在页面里登录。
@@ -239,23 +270,25 @@
           <el-button size="small" text @click="togglePagePane">收起</el-button>
         </div>
         <BrowserPane
-          v-if="active"
+          v-if="pageTarget"
           :key="webviewKey"
           ref="paneRef"
-          :src="active.homeUrl"
-          :partition="partitionOf(active)"
+          :src="pageTarget.homeUrl"
+          :partition="partitionOf(pageTarget)"
           :useragent="paneUserAgent"
           @ready="onWebviewReady"
         />
       </div>
     </el-container>
 
-    <el-footer height="26px" class="shell-footer">
-      <StatusBar />
-    </el-footer>
+    <!--
+      状态栏（注入桥 / 适配器数 / 版本 / 水印）2026-10-29 按用户要求整条隐藏。
+      组件文件保留：改回来只要把 <el-footer> 这段放回来。
+      署名没有丢 —— 工具 → 关于 里仍有作者与项目主页，导出的 Excel 属性也带 creator。
+    -->
 
     <LoginDialog
-      v-if="active"
+      v-if="active && !isLocalView(activeId)"
       v-model="loginVisible"
       :platform-id="active.id"
       :platform-name="active.displayName"
@@ -265,7 +298,7 @@
     <!-- 工单 031：导出中心（范围 / 格式 / 列 / 含图 / 汇总） -->
     <ExportDialog
       v-model="exportVisible"
-      :active-platform-id="activeId"
+      :active-platform-id="exportPlatformId"
       :active-platform-name="active?.displayName ?? ''"
       :current-orders="filteredOrders"
       :selected-orders="selectedOrders"
@@ -348,20 +381,21 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { ArrowDown, Loading, Refresh, Search } from '@element-plus/icons-vue'
+import { ArrowDown, DataAnalysis, Loading, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import BrowserPane from '../platform/BrowserPane.vue'
 import LoginDialog from '../platform/LoginDialog.vue'
 import OrderTable from '../platform/OrderTable.vue'
+import OverviewPane from '../overview/OverviewPane.vue'
 import ExportDialog from '../export/ExportDialog.vue'
 import ExportHistoryDialog from '../export/ExportHistoryDialog.vue'
 import AboutDialog from './AboutDialog.vue'
 import MitmSettingsDialog from '../settings/MitmSettingsDialog.vue'
-import StatusBar from './StatusBar.vue'
 import { useOrdersStore } from '@renderer/stores/orders'
 import { usePlatformsStore } from '@renderer/stores/platforms'
 import type { AdapterSummary, Order } from '@shared/types'
 import { HIDDEN_PLATFORMS } from '@shared/platform-visibility'
+import { bizLineOf } from '@renderer/utils/order-stats'
 
 defineProps<{
   /**
@@ -378,6 +412,27 @@ const platformsStore = usePlatformsStore()
 const HIDDEN = HIDDEN_PLATFORMS
 
 const activeId = ref('')
+/**
+ * 总览页的伪平台 id。
+ * 用 `__` 包裹的假 id 是为了让它**绝不**命中任何真实适配器：
+ * 登录、抓取、导出都按 `activeId` 找平台，撞名会直接抓错平台的数据。
+ */
+const OVERVIEW_ID = '__overview__'
+const isOverview = computed(() => activeId.value === OVERVIEW_ID)
+
+/**
+ * 外卖视图的伪平台后缀：`taobao-local` / `jd-local`。
+ * 外卖单本来就在淘宝/京东的订单列表里，这里只是把它们从购物单里挑出来单独成一栏，
+ * 不新增适配器、也不改抓取逻辑 —— 登录、页面、抓取仍然走母平台。
+ */
+const LOCAL_SUFFIX = '-local'
+function isLocalView(id: string): boolean {
+  return id.endsWith(LOCAL_SUFFIX)
+}
+function localBaseOf(id: string): string {
+  return id.slice(0, -LOCAL_SUFFIX.length)
+}
+
 const loginVisible = ref(false)
 /**
  * 平台页面分栏（原版作法：页面就在界面上）。
@@ -461,8 +516,26 @@ interface PlatformRow extends AdapterSummary {
   loggedIn: boolean
 }
 
-const platforms = computed<PlatformRow[]>(() => {
-  const rows = platformsStore.adapters
+/** 某平台的订单数（闲鱼含卖家单：同一平台的两个视角） */
+function rawCountOf(platformId: string): number {
+  if (platformId === 'xianyu') {
+    return (
+      (ordersStore.byPlatform.xianyu?.length ?? 0) +
+      (ordersStore.byPlatform['xianyu-sold']?.length ?? 0)
+    )
+  }
+  return ordersStore.byPlatform[platformId]?.length ?? 0
+}
+
+/** 某平台里被判定为外卖/本地生活的订单数（只有京东/淘宝会有） */
+function localCountOf(platformId: string): number {
+  if (platformId !== 'jd' && platformId !== 'taobao') return 0
+  return (ordersStore.byPlatform[platformId] ?? []).filter((o) => bizLineOf(o) === 'local').length
+}
+
+/** 购物平台行（外卖单已经扣走，避免和下面的外卖栏重复计数） */
+const shoppingRows = computed<PlatformRow[]>(() => {
+  return platformsStore.adapters
     .filter((a) => !HIDDEN.has(a.id))
     .filter((a) => {
       // 默认全显示；只有用户手动勾选过才按他的选择来。
@@ -473,16 +546,32 @@ const platforms = computed<PlatformRow[]>(() => {
     })
     .map((a) => {
       const login = platformsStore.loginOf(a.id)
-      // 闲鱼数量含卖家单（同一平台的两个视角）
-      const count =
-        a.id === 'xianyu'
-          ? (ordersStore.byPlatform.xianyu?.length ?? 0) +
-            (ordersStore.byPlatform['xianyu-sold']?.length ?? 0)
-          : (ordersStore.byPlatform[a.id]?.length ?? 0)
-      return { ...a, count, loggedIn: login.loggedIn }
+      const local = localCountOf(a.id)
+      return { ...a, count: rawCountOf(a.id) - local, loggedIn: login.loggedIn }
     })
-  return rows
 })
+
+/** 外卖行：京东/淘宝拆出来的本地生活订单，独立成一栏；没有外卖单就不显示 */
+const localRows = computed<PlatformRow[]>(() => {
+  const out: PlatformRow[] = []
+  for (const row of shoppingRows.value) {
+    const local = localCountOf(row.id)
+    if (!local) continue
+    out.push({
+      ...row,
+      id: `${row.id}${LOCAL_SUFFIX}`,
+      displayName: `${row.displayName}外卖`,
+      count: local
+    })
+  }
+  return out
+})
+
+/** 侧栏里的购物平台 */
+const platforms = computed<PlatformRow[]>(() => shoppingRows.value)
+
+/** 侧栏全部行：网购在前、外卖在后 */
+const allRows = computed<PlatformRow[]>(() => [...platforms.value, ...localRows.value])
 
 /** 可勾选的平台（技术性隐藏的不参与） */
 const selectablePlatforms = computed(() => platformsStore.adapters.filter((a) => !HIDDEN.has(a.id)))
@@ -524,18 +613,21 @@ function savePlatforms(): void {
   setVisibleIds(picked.length === all.length ? null : picked)
   platformsVisible.value = false
   // 当前平台被藏起来时，切到第一个可见的
-  if (!platforms.value.some((p) => p.id === activeId.value)) {
+  if (!allRows.value.some((p) => p.id === activeId.value)) {
     const first = platforms.value[0]
     if (first) selectPlatform(first.id)
   }
 }
 
 /** 可见平台的订单合计（下架平台的订单不计入顶部汇总，数据仍在本地） */
-const visibleTotal = computed(() => platforms.value.reduce((sum, p) => sum + p.count, 0))
+const visibleTotal = computed(() => allRows.value.reduce((sum, p) => sum + p.count, 0))
 
-const active = computed(() => platforms.value.find((p) => p.id === activeId.value) ?? null)
+/** 总览页只统计这些平台（与侧栏一致，下架平台的历史缓存不参与） */
+const visiblePlatformIds = computed(() => platforms.value.map((p) => p.id))
+
+const active = computed(() => allRows.value.find((p) => p.id === activeId.value) ?? null)
 const login = computed(() => platformsStore.loginOf(activeId.value))
-const capturedCount = computed(() => ordersStore.byPlatform[activeId.value]?.length ?? 0)
+const capturedCount = computed(() => currentOrders.value.length)
 
 /** 侧栏头像：平台名首字（「1688」这类纯数字取前两位） */
 function initialOf(name: string): string {
@@ -728,16 +820,23 @@ watch(scrollRunning, (on) => {
   }
 })
 
-/** 当前平台订单（闲鱼按买/卖视角过滤） */
+/** 当前平台订单（闲鱼按买/卖视角过滤；外卖栏只取本地生活订单） */
 const currentOrders = computed<Order[]>(() => {
   const id = activeId.value
   if (!id) return []
+  if (isLocalView(id)) {
+    const base = localBaseOf(id)
+    return (ordersStore.byPlatform[base] ?? []).filter((o) => bizLineOf(o) === 'local')
+  }
   if (id === 'xianyu') {
     const bought = ordersStore.byPlatform.xianyu ?? []
     const sold = ordersStore.byPlatform['xianyu-sold'] ?? []
     return xianyuSeller.value ? sold : bought
   }
-  return ordersStore.byPlatform[id] ?? []
+  const list = ordersStore.byPlatform[id] ?? []
+  // 京东/淘宝的外卖单已单独成栏，购物栏里不能再出现（否则两侧重复计数）
+  if (id === 'jd' || id === 'taobao') return list.filter((o) => bizLineOf(o) !== 'local')
+  return list
 })
 
 // ---------------------------------------------------------------------------
@@ -851,17 +950,45 @@ function partitionOf(a: AdapterSummary): string {
   return a.partition ?? `persist:platform-${a.id}`
 }
 
+/**
+ * 页面面板的目标平台：外卖栏没有自己的页面，永远借用母平台（淘宝/京东）的页面与登录态。
+ * 这样切到「淘宝外卖」时 webview 不会被换成另一个分区（那等于把登录态丢了）。
+ */
+const pageTarget = computed<PlatformRow | null>(() => {
+  const id = activeId.value
+  if (isLocalView(id)) return platforms.value.find((p) => p.id === localBaseOf(id)) ?? null
+  return active.value
+})
+
+/** 外卖栏的母平台名（提示文案用） */
+const localBaseName = computed(() => {
+  const id = activeId.value
+  if (!isLocalView(id)) return ''
+  const base = localBaseOf(id)
+  return platforms.value.find((p) => p.id === base)?.displayName ?? base
+})
+
+/** 抓取/导出都要落到母平台：外卖栏没有自己的适配器 */
+function reloadTargetOf(id: string): string {
+  return isLocalView(id) ? localBaseOf(id) : id
+}
+
+const exportPlatformId = computed(() => reloadTargetOf(activeId.value))
+
 /** webview 的 key：平台 + 分区（换平台即重建） */
 const webviewKey = computed(() => {
-  const a = active.value
+  const a = pageTarget.value
   if (!a) return 'none'
   return `${a.id}|${partitionOf(a)}`
 })
 
 function selectPlatform(id: string): void {
   if (activeId.value === id) return
+  // 切到「淘宝外卖」时页面面板仍指向淘宝，webview 不会重建 ——
+  // 这时把 webviewId 清空就再也等不到 ready 事件，抓取按钮会永久变灰。
+  const prevTarget = pageTarget.value?.id ?? ''
   activeId.value = id
-  webviewId.value = null
+  if ((pageTarget.value?.id ?? '') !== prevTarget) webviewId.value = null
 }
 
 /** 每个平台独立的「重新加载」状态（后台进行，互不影响） */
@@ -1338,13 +1465,6 @@ onMounted(() => {
   min-height: 0;
 }
 
-.shell-footer {
-  flex: none;
-  padding: 0;
-  border-top: 1px solid var(--el-border-color-lighter);
-  background: var(--el-bg-color);
-}
-
 .sidebar {
   flex: none;
   border-right: 1px solid var(--el-border-color-light);
@@ -1375,6 +1495,8 @@ onMounted(() => {
 
 .platform-item {
   width: 100%;
+  /* width:100% + padding 在 content-box 下会宽出 12px，把侧栏顶出横向滚动条 */
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1398,6 +1520,38 @@ onMounted(() => {
   background: var(--el-color-primary-light-9);
   color: var(--el-color-primary);
   font-weight: 500;
+}
+
+/* 总览入口：用图标而非首字头像，和下面的平台行区分开 */
+.overview-item {
+  font-weight: 500;
+}
+
+.overview-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  font-size: 14px;
+  color: var(--el-color-primary);
+}
+
+.overview-item:not(.active) .overview-icon {
+  color: var(--el-text-color-secondary);
+}
+
+.list-divider {
+  height: 1px;
+  margin: 4px 6px 6px;
+  background: var(--el-border-color-lighter);
+}
+
+/* 网购 / 外卖 分组标题 */
+.group-head {
+  padding: 8px 8px 2px;
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: 0.5px;
+  color: var(--el-text-color-placeholder);
 }
 
 /* 平台首字头像：没有 Logo 素材时也比纯文字列表更容易扫读 */

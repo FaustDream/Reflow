@@ -141,7 +141,7 @@ export const jdAdapter: PlatformAdapter = {
       { name: 'unick', domainIncludes: 'jd.com' }
     ],
     userIdCookie: 'pinId',
-    nicknameCookie: 'unick'
+    nicknameCookies: ['unick']
   },
   matchRules: [
     // list.action 带 __fetch__=1 返回 JSON 数组；HTML 形态（不带标记）不匹配，避免误解析

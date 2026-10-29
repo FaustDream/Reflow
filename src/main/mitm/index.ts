@@ -21,6 +21,7 @@ import {
   installCert,
   isCertInstalled,
   loadState,
+  mitmSupported,
   readProxy,
   recoverIfNeeded,
   removeCert,
@@ -112,6 +113,7 @@ export function setupMitmIpc(): { shutdown: () => void } {
   const status = (): MitmStatus => ({
     running: proxy?.running ?? false,
     port: state.port,
+    supported: mitmSupported(),
     certInstalled: isCertInstalled(),
     systemProxy: (() => {
       const p = readProxy()
@@ -138,7 +140,20 @@ export function setupMitmIpc(): { shutdown: () => void } {
 
   ipcMain.handle('mitm:status', () => status())
 
+  /**
+   * macOS / Linux：系统代理与根证书安装需要提权，与「不要管理员权限」的约束冲突，
+   * 直接返回不支持。默认的 WebView 注入通道不受影响。
+   */
+  const unsupported = (): MitmResult => ({
+    ok: false,
+    reason: 'unsupported',
+    message:
+      '当前平台不支持 MITM 通道（系统代理与根证书安装仅 Windows 实现）。' +
+      'WebView 注入通道不受影响，抓取与导出照常可用。'
+  })
+
   ipcMain.handle('mitm:install-cert', (): MitmResult => {
+    if (!mitmSupported()) return unsupported()
     try {
       installCert()
       return { ok: true }
@@ -154,6 +169,7 @@ export function setupMitmIpc(): { shutdown: () => void } {
 
   ipcMain.handle('mitm:enable', (): MitmResult => {
     if (proxy) return { ok: true }
+    if (!mitmSupported()) return unsupported()
     if (!isCertInstalled()) {
       return { ok: false, reason: 'cert-missing', message: '请先安装根证书（只需一次）' }
     }

@@ -322,7 +322,9 @@ export const pddAdapter: PlatformAdapter = {
   partition: 'persist:platform-pdd',
   // 原版 asar_pdd main.js：PDDAccessToken 出现即登录（令牌值不外显）
   login: {
-    cookies: [{ name: 'PDDAccessToken', domainIncludes: 'yangkeduo' }]
+    cookies: [{ name: 'PDDAccessToken', domainIncludes: 'yangkeduo' }],
+    // 拼多多把昵称存在 pdd_user_name（URL 编码）；之前完全没配，界面上永远只能显示「已登录」
+    nicknameCookies: ['pdd_user_name']
   },
   matchRules: [
     // 实测主接口（2026-10-26）：orders.html 首屏与滚动分页都走这个
