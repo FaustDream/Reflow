@@ -21,11 +21,16 @@
       <span class="item muted">v{{ runtime.version }}</span>
     </el-tooltip>
     <span class="item muted">数据仅存本机 · 不上传</span>
+    <!-- 作者水印：软件可自由使用，但来源要看得见 -->
+    <span class="item watermark" title="作者 · 点击打开项目主页" @click="openHome">
+      Reflow · {{ AUTHOR }}
+    </span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { AUTHOR, REPO_URL } from '@shared/app-meta'
 import type { AdapterSummary } from '@shared/types'
 import { isHiddenPlatform } from '@shared/platform-visibility'
 
@@ -49,6 +54,11 @@ onMounted(async () => {
   bridgeReady.value = adapters.value.length > 0
   runtime.value = await window.api.getAppInfo()
 })
+
+/** 外链走系统浏览器（主进程的 setWindowOpenHandler 已统一处理） */
+function openHome(): void {
+  window.open(REPO_URL, '_blank')
+}
 </script>
 
 <style scoped>
@@ -81,6 +91,20 @@ onMounted(async () => {
 /* 版本号与「数据仅存本机」之间留出间隔（两者都去掉了右外边距） */
 .item.muted + .item.muted {
   margin-left: 16px;
+}
+
+/* 作者水印：弱化但不隐藏，鼠标悬停才变主色 */
+.watermark {
+  margin-left: 16px;
+  margin-right: 0;
+  color: var(--el-text-color-placeholder);
+  cursor: pointer;
+  letter-spacing: 0.2px;
+  transition: color 0.15s;
+}
+
+.watermark:hover {
+  color: var(--el-color-primary);
 }
 
 .dot {

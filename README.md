@@ -11,9 +11,11 @@
 > 快手小店、得物、1688。适配器代码与已抓订单都保留，只是不在界面显示；
 > 要恢复某个平台，把它从 `src/shared/platform-visibility.ts` 的 `HIDDEN_PLATFORMS` 里删掉即可。
 
-> 本项目的完整由来、逆向分析依据与开发方案见仓库外部的两份文档：
-> `魔猫软件逆向分析报告.md`、`魔猫整合包开发方案.md`；
-> 可执行工单见 `.scratch/reflow/tickets/`（30 张，含决策记录）。
+> 开发过程中的工单记录（决策依据、平台改版取证过程）**未随仓库发布**，
+> 代码注释里保留了关键结论，够看懂为什么这么写。
+
+> **许可**：可自由使用与修改，**保留作者署名、禁止商业售卖**。
+> 详见 [LICENSE](LICENSE)。作者：**FaustDream** · [项目主页](https://github.com/FaustDream/Reflow)
 
 ---
 
@@ -216,6 +218,27 @@ renderer bundle：JS **478KB**、CSS **128KB** —— Element Plus 按需引入�
 | 前端 | Vue 3 + TypeScript + Element Plus | |
 | 语言 | TypeScript **5.9** | ⚠ vue-tsc 3.x 未适配 TypeScript 7，勿升级 |
 
+## 快速开始
+
+需要 **Node.js 18+**（推荐 20 / 22）。
+
+```bash
+git clone https://github.com/FaustDream/Reflow.git
+cd Reflow
+npm install
+npm run dev:sw
+```
+
+`dev:sw` 走软件渲染，没有独立显卡的机器、虚拟机、远程桌面都能正常起窗口；
+有正常显卡时可以试 `npm run dev`（启动更快，但 GPU 驱动异常时会直接崩在 `GPU process isn't usable`）。
+
+首次运行**不需要任何配置**：登录态、订单缓存都落在本机 `%APPDATA%\回流 Reflow`，
+每个平台首次点「登录」扫码即可，订单会自动抓取。
+
+> **MITM 抓取通道是可选的**，默认走页面自带的官方 SDK，不需要证书。
+> 仓库只带公钥（`ca.crt` / `leaf.crt`），私钥不入库 —— 想用 MITM 通道时
+> 跑一次 `node scripts/gen-mitm-certs.mjs` 生成本机证书，再到「工具 → 抓取通道」里装。
+
 ## 开发
 
 ```bash
@@ -223,7 +246,7 @@ npm install
 npm run dev          # 热重载开发
 npm run dev:demo     # 带样例订单的隔离演示实例（userData 指向 %TEMP%/reflow-demo，不碰真实数据）
 npm run dev:sw       # 无 GPU 的虚拟机/远程桌面：改用软件渲染启动（否则 GPU 进程会崩）
-node scripts/gen-mitm-certs.mjs   # 重新生成 MITM 证书（一般不用跑，仓库已带）
+node scripts/gen-mitm-certs.mjs   # 生成 MITM 证书（可选通道，私钥不入库，需自己跑）
 npm run typecheck    # node + preload + web 三份类型检查
 npm run icon         # 重新生成应用图标（build/icons/reflow.ico，多尺寸）
 npm run shortcut     # 重建桌面 / 开始菜单快捷方式（带图标）
