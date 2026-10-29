@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AboutDialog: typeof import('./../../components/layout/AboutDialog.vue')['default']
     BrowserPane: typeof import('./../../components/platform/BrowserPane.vue')['default']
     CaptureLog: typeof import('./../../components/platform/CaptureLog.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']

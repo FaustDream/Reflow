@@ -9,6 +9,7 @@
  */
 import ExcelJS from 'exceljs'
 import { CORE_EXPORT_COLUMNS, type ExportColumn, type Order } from '../../shared/types/order'
+import { SIGNATURE } from '../../shared/app-meta'
 import type { PreparedImage } from './images'
 
 const ROW_CHUNK = 1000
@@ -230,9 +231,13 @@ function addOrdersSheet(
 }
 
 function newWorkbook(): ExcelJS.Workbook {
-  // 不写入创建者/机器元数据（避免本机用户名泄露，D-4 隐私意识）
+  /**
+   * 元数据里只写**固定署名**，绝不写本机用户名/机器名（D-4 隐私意识）。
+   * 顺带成了导出文件的水印：别人拿到表格，属性里能看到来源。
+   */
   const workbook = new ExcelJS.Workbook()
-  workbook.creator = '回流 Reflow'
+  workbook.creator = SIGNATURE
+  workbook.lastModifiedBy = SIGNATURE
   workbook.created = new Date(0)
   workbook.modified = new Date(0)
   return workbook

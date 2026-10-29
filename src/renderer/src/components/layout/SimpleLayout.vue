@@ -19,6 +19,7 @@
               <el-dropdown-item command="capture-log">捕获日志</el-dropdown-item>
               <el-dropdown-item command="diagnostics">诊断信息</el-dropdown-item>
               <el-dropdown-item command="clear" divided>清空数据</el-dropdown-item>
+              <el-dropdown-item command="about" divided>关于</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -333,6 +334,7 @@
 
     <ExportHistoryDialog v-model="historyVisible" />
     <MitmSettingsDialog v-model="mitmVisible" />
+    <AboutDialog v-model="aboutVisible" />
 
     <!-- 首屏：等历史订单全部读进内存再显示，避免先闪「暂无订单」再跳出几百条 -->
     <div v-if="ordersStore.cacheLoading" class="boot-mask">
@@ -352,6 +354,7 @@ import LoginDialog from '../platform/LoginDialog.vue'
 import OrderTable from '../platform/OrderTable.vue'
 import ExportDialog from '../export/ExportDialog.vue'
 import ExportHistoryDialog from '../export/ExportHistoryDialog.vue'
+import AboutDialog from './AboutDialog.vue'
 import MitmSettingsDialog from '../settings/MitmSettingsDialog.vue'
 import StatusBar from './StatusBar.vue'
 import { useOrdersStore } from '@renderer/stores/orders'
@@ -408,6 +411,7 @@ const tableRef = ref<{ clearSelection: () => void } | null>(null)
 const exportVisible = ref(false)
 const exportScope = ref<'current' | 'selected'>('current')
 const historyVisible = ref(false)
+const aboutVisible = ref(false)
 const mitmVisible = ref(false)
 
 /** 捕获日志：最近捕获的请求与结果（诊断「为什么没数据」） */
@@ -1168,6 +1172,10 @@ async function onToolCommand(cmd: string): Promise<void> {
   if (cmd === 'clear') {
     // 原来在侧栏底部，左侧列表不再放任何按钮后收进「工具」菜单
     await onClear()
+    return
+  }
+  if (cmd === 'about') {
+    aboutVisible.value = true
     return
   }
 }

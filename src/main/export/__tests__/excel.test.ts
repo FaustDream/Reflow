@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import ExcelJS from 'exceljs'
 import { buildOrdersWorkbook, resolveExportColumns } from '../excel'
+import { SIGNATURE } from '../../../shared/app-meta'
 import type { PreparedImage } from '../images'
 import { CORE_EXPORT_COLUMNS, emptyOrder, type Order } from '../../../shared/types/order'
 import type { ExportColumn } from '../../../shared/types/order'
@@ -131,5 +132,24 @@ describe('工单 009：含图导出', () => {
     const sheet = wb.getWorksheet('订单')!
     expect(sheet.rowCount).toBe(3)
     expect((wb.model as { media?: unknown[] }).media?.length).toBe(1)
+  })
+})
+
+describe('导出文件水印：文档属性里的作者署名', () => {
+  it('creator / lastModifiedBy 写入固定署名（分发出去能看出处）', async () => {
+    const buf = await buildOrdersWorkbook([makeOrder(1)])
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.load(buf as unknown as ArrayBuffer)
+    expect(wb.creator).toBe(SIGNATURE)
+    expect(wb.lastModifiedBy).toBe(SIGNATURE)
+  })
+
+  it('署名里不含本机用户名 / 路径（D-4 隐私要求）', async () => {
+    const buf = await buildOrdersWorkbook([makeOrder(1)])
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.load(buf as unknown as ArrayBuffer)
+    // 元数据只能是固定字符串，不能带出运行环境
+    expect(wb.creator).not.toMatch(/Lynn|Users|AppData|Desktop/i)
+    expect(wb.creator).toContain('github.com/FaustDream/Reflow')
   })
 })
