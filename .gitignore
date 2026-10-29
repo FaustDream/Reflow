@@ -1,0 +1,20 @@
+node_modules/
+out/
+dist-release/
+build/artifacts.json
+*.log
+.DS_Store
+.idea/
+.vscode/
+# 工单 002：测试数据默认不入版本库，需入库的脱敏 fixture 走 testdata/ 并显式 !排除
+testdata/**/*.xlsx
+testdata/**/*.real.*
+
+# 自检脚本产物（截图 / 临时 xlsx / 解析快照）
+.scratch/
+
+# MITM 证书私钥：**绝不能进版本库**。
+# crt 是公钥可以带，key 泄露等于任何人都能签发本机信任的证书。
+# 需要证书时跑 `node scripts/gen-mitm-certs.mjs` 自己生成。
+resources/mitm/*.key
+resources/mitm/*.srl

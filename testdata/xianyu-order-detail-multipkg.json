@@ -1,0 +1,20 @@
+{
+  "api": "mtop.idle.web.trade.order.detail",
+  "ret": ["SUCCESS::调用成功"],
+  "data": {
+    "orderId": "990101202605100002",
+    "components": [
+      {
+        "render": "orderStatusVO",
+        "data": { "fields": { "title": "该订单分成多个包" } }
+      },
+      {
+        "render": "orderInfoVO",
+        "data": {
+          "orderInfoList": [{ "title": "订单编号", "value": "990101202605100002" }],
+          "priceInfo": { "billList": [] }
+        }
+      }
+    ]
+  }
+}

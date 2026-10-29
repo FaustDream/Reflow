@@ -1,0 +1,66 @@
+{
+  "api": "mtop.idle.web.trade.sold.list",
+  "ret": ["SUCCESS::调用成功"],
+  "v": "1.0",
+  "traceId": "synthetic-sold-trace",
+  "data": {
+    "totalCount": "2",
+    "nextPage": "true",
+    "lastEndRow": "50",
+    "resultExt": {},
+    "items": [
+      {
+        "commonData": {
+          "orderId": 880000000000000001,
+          "orderIdStr": "880000000000000001",
+          "blockType": "NONE",
+          "tradeStatusEnum": "trade_wait_buyer_confirm",
+          "utArgs": { "idleBizCode": "6" }
+        },
+        "head": {
+          "render": "head",
+          "data": {
+            "createTime": "2026-06-01 16:40:12",
+            "statusViewMsg": "等待买家收货",
+            "userInfo": { "userId": "7700001", "userNick": "合成买家甲" }
+          }
+        },
+        "content": {
+          "render": "content",
+          "data": {
+            "detailInfo": {
+              "auctionTitle": "我卖出的合成商品甲",
+              "auctionPic": "http://img.example.com/i/sold-a.jpg?x=1"
+            },
+            "priceInfo": {
+              "price": "88.00",
+              "buyAmount": "1",
+              "auctionPriceDesc": "实付款"
+            }
+          }
+        },
+        "tail": { "render": "tail", "data": { "btnList": [] } }
+      },
+      {
+        "commonData": {
+          "orderId": "880000000000000002",
+          "itemId": "5500002",
+          "utArgs": { "idleBizCode": "2" }
+        },
+        "head": {
+          "data": {
+            "createTime": 1748000000000,
+            "statusViewMsg": "交易成功",
+            "userInfo": { "userId": "7700002", "userNick": "合成买家乙" }
+          }
+        },
+        "content": {
+          "data": {
+            "detailInfo": { "auctionTitle": "我卖出的合成商品乙（虚拟）" },
+            "priceInfo": { "price": "12.00", "buyAmount": "3" }
+          }
+        }
+      }
+    ]
+  }
+}

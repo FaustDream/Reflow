@@ -1,0 +1,103 @@
+{
+  "api": "mtop.taobao.order.queryboughtlistV2",
+  "ret": ["SUCCESS::调用成功"],
+  "data": {
+    "global": { "pageControl": { "hasMore": false, "nextPageIndex": 1 } },
+    "hierarchy": {
+      "structure": {
+        "orderContainer": ["shopOrderContainer_1", "shopOrderContainer_2"],
+        "shopOrderContainer_1": ["shopInfo_1", "orderStatus_1", "orderColContainer_1"],
+        "shopOrderContainer_2": ["shopInfo_2", "orderStatus_2", "orderColContainer_2"],
+        "orderColContainer_1": ["orderDetailCol_1", "orderPaymentCol_1", "orderOperationsCol_1"],
+        "orderColContainer_2": ["orderDetailCol_2", "orderPaymentCol_2", "orderOperationsCol_2"],
+        "orderDetailCol_1": ["orderItemInfo_1", "orderItemInfo_2"],
+        "orderDetailCol_2": ["orderItemInfo_3"],
+        "orderPaymentCol_1": ["orderPayment_1"],
+        "orderPaymentCol_2": ["orderPayment_2"],
+        "orderOperationsCol_1": [],
+        "orderOperationsCol_2": []
+      }
+    },
+    "pagination": { "fields": { "currentPage": 1 } },
+    "data": {
+      "shopOrderContainer_1": { "id": "shopOrderContainer_1" },
+      "shopInfo_1": {
+        "fields": {
+          "orderId": "3001112223334445",
+          "createTime": "2026-08-15 14:22:33",
+          "tradeTitle": "交易成功",
+          "shopName": "合成店铺甲",
+          "sellerName": "合成卖家甲",
+          "outUrl": "https://shop123456.taobao.com/",
+          "orderDetailUrl": "https://buyertrade.taobao.com/trade/detail/tradeSnap.htm?tradeID=3001112223334445"
+        }
+      },
+      "orderStatus_1": { "fields": { "title": "交易成功", "url": "https://trade.taobao.com/trade/detail/trade_item_detail.htm?bizOrderId=3001112223334445" } },
+      "orderColContainer_1": { "fields": {} },
+      "orderDetailCol_1": { "fields": {} },
+      "orderPaymentCol_1": { "fields": {} },
+      "orderOperationsCol_1": { "fields": {} },
+      "orderItemInfo_1": {
+        "fields": {
+          "orderId": "3001112223334445",
+          "item": {
+            "itemId": "6001",
+            "title": "合成淘宝商品甲",
+            "pic": "//img.alicdn.com/synthetic/a.jpg",
+            "quantity": "1",
+            "skuText": "颜色：红色；尺码：L",
+            "priceInfo": { "actualTotalFee": "150.00", "promotion": "160.00" }
+          }
+        }
+      },
+      "orderItemInfo_2": {
+        "fields": {
+          "orderId": "3001112223334445",
+          "item": {
+            "itemId": "6002",
+            "title": "合成淘宝商品乙",
+            "pic": "//img.alicdn.com/synthetic/b.jpg",
+            "quantity": "2",
+            "skuText": "规格：标配",
+            "priceInfo": { "actualTotalFee": "40.00" }
+          }
+        }
+      },
+      "orderPayment_1": {
+        "fields": {
+          "actualFee": { "value": "￥190.00" },
+          "pcPostFee": { "value": "￥10.00" }
+        }
+      },
+      "shopOrderContainer_2": { "id": "shopOrderContainer_2" },
+      "shopInfo_2": {
+        "fields": {
+          "orderId": "3009998887776665",
+          "createTime": 1759400000000,
+          "tradeTitle": "等待卖家发货",
+          "shopName": "合成店铺乙",
+          "outUrl": "https://other.example.com/?user_number_id=987654",
+          "orderDetailUrl": ""
+        }
+      },
+      "orderStatus_2": { "fields": { "title": "等待卖家发货" } },
+      "orderColContainer_2": { "fields": {} },
+      "orderDetailCol_2": { "fields": {} },
+      "orderPaymentCol_2": { "fields": {} },
+      "orderOperationsCol_2": { "fields": {} },
+      "orderItemInfo_3": {
+        "fields": {
+          "orderId": "3009998887776665",
+          "item": {
+            "itemId": "7001",
+            "title": "合成淘宝商品丙",
+            "pic": "https://img.example.com/c.png",
+            "quantity": "1",
+            "priceInfo": { "actualTotalFee": "88.00" }
+          }
+        }
+      },
+      "orderPayment_2": { "fields": { "actualFee": { "value": "￥88.00" } } }
+    }
+  }
+}

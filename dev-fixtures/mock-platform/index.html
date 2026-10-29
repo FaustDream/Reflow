@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Mock 平台 — 回流捕获管道演示（工单 005）</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 32px auto; padding: 0 16px; color: #222; }
+    h1 { font-size: 20px; } code { background: #f4f4f5; padding: 1px 5px; border-radius: 4px; }
+    button { margin-right: 8px; padding: 6px 14px; cursor: pointer; }
+    #log { background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px; min-height: 120px; font-size: 13px; }
+    #log div { padding: 2px 0; border-bottom: 1px dashed #eee; }
+    .d2 { color: #16a34a; font-size: 12px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Mock 平台</h1>
+  <p>
+    本页面扮演「电商平台订单页」。点击下面按钮，页面会<b>以自身身份</b>用三种不同形态请求订单接口；
+    宿主应用（回流 Reflow）的注入脚本应捕获这些响应，解析后在右侧「订单表格」出现 3 行（重复形态被去重）。
+  </p>
+  <p>
+    <button id="btn-xhr">① XHR 请求</button>
+    <button id="btn-fetch">② fetch 请求</button>
+    <button id="btn-jsonp">③ JSONP 请求</button>
+    <button id="btn-all">一键三连（验证去重）</button>
+  </p>
+  <div id="log"></div>
+  <p class="d2">
+    决策 D-2 演示：本页共发出的所有请求都列在上方日志中 —— 它们全部由页面自身发起，
+    注入脚本只「观察」，从不构造任何请求（更不伪造签名）。
+  </p>
+
+  <script>
+    const logEl = document.getElementById('log')
+    let seq = 0
+    function log(msg) {
+      const line = document.createElement('div')
+      line.textContent = `[${++seq}] ${new Date().toLocaleTimeString()} 页面自身发出：${msg}`
+      logEl.prepend(line)
+    }
+
+    // ---- ① XHR ----
+    function fireXhr() {
+      log('XMLHttpRequest GET /api/orders-xhr')
+      const xhr = new XMLHttpRequest()
+      xhr.open('GET', '/api/orders-xhr?t=' + Date.now())
+      xhr.onload = () => log('XHR 响应到达（' + xhr.status + '），页面正常处理')
+      xhr.send()
+    }
+
+    // ---- ② fetch ----
+    function fireFetch() {
+      log('fetch GET /api/orders-fetch')
+      fetch('/api/orders-fetch?t=' + Date.now())
+        .then((r) => r.json())
+        .then((data) => log('fetch 响应到达（' + data.orders.length + ' 条），页面正常处理'))
+        .catch((e) => log('fetch 失败：' + e.message))
+    }
+
+    // ---- ③ JSONP：先定义全局回调，再动态插入 <script>（Hook 靠此捕获） ----
+    window.__reflowMockCb = function (data) {
+      log('JSONP 回调收到 ' + data.orders.length + ' 条，页面正常处理')
+    }
+    function fireJsonp() {
+      log('动态 <script> GET /api/orders-jsonp?callback=__reflowMockCb')
+      const s = document.createElement('script')
+      s.src = '/api/orders-jsonp?callback=__reflowMockCb&t=' + Date.now()
+      s.onload = () => s.remove()
+      document.body.appendChild(s)
+    }
+
+    document.getElementById('btn-xhr').onclick = fireXhr
+    document.getElementById('btn-fetch').onclick = fireFetch
+    document.getElementById('btn-jsonp').onclick = fireJsonp
+    document.getElementById('btn-all').onclick = () => {
+      fireXhr(); fireFetch(); fireJsonp()
+      log('三形态同批 orderId，宿主表格应仍为 3 单（去重生效）')
+    }
+  </script>
+</body>
+</html>
