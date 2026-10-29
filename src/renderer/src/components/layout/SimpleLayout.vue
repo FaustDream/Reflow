@@ -244,6 +244,7 @@
           ref="paneRef"
           :src="active.homeUrl"
           :partition="partitionOf(active)"
+          :useragent="paneUserAgent"
           @ready="onWebviewReady"
         />
       </div>
@@ -412,6 +413,20 @@ const exportVisible = ref(false)
 const exportScope = ref<'current' | 'selected'>('current')
 const historyVisible = ref(false)
 const aboutVisible = ref(false)
+
+/**
+ * webview 的 User-Agent：伪装成普通 Chrome，去掉 `Electron/44.x` 与 `回流Reflow/0.1.0`。
+ *
+ * Electron 默认 UA 里带应用名和 Electron 版本，服务端一眼能认出「不是真浏览器」。
+ * 实测美团订单数没变化（38 单是平台上限，见 2026-10-29 排查），但去掉标识更不容易
+ * 被风控当成爬虫，属于低成本的通用改进。
+ * Chrome 主版本跟运行时 Chromium 对齐，否则比真实浏览器还容易被判异常。
+ */
+const paneUserAgent = computed(
+  () =>
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
+    `Chrome/${(window.navigator.userAgent.match(/Chrome\/(\d+)/)?.[1] ?? '152')}.0.0.0 Safari/537.36`
+)
 const mitmVisible = ref(false)
 
 /** 捕获日志：最近捕获的请求与结果（诊断「为什么没数据」） */
