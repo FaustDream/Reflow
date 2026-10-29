@@ -86,6 +86,20 @@ function startDev() {
       '--use-gl=swiftshader',
       '--use-angle=swiftshader'
     ],
-    { cwd: root, env, detached: false, stdio }
+    {
+      cwd: root,
+      env,
+      detached: false,
+      stdio,
+      /**
+       * 必须显式关掉控制台窗口。
+       *
+       * 父进程是 electron.exe（GUI 子系统，本来没有控制台），
+       * 而 node.exe 是**控制台子系统**程序 —— Windows 会给它分配一个新控制台，
+       * 于是双击快捷方式后弹出一个黑窗口，一直挂到应用关闭。
+       * `windowsHide: true` 会带 CREATE_NO_WINDOW 标志，窗口不会出现。
+       */
+      windowsHide: true
+    }
   )
 }
