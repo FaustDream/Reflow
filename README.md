@@ -3,12 +3,13 @@
 把散落在各电商平台的订单数据，回流到你自己手上。
 
 整合自 5 个独立的「魔猫」系订单导出工具（京东 / 拼多多 / 淘宝·1688 / 闲鱼 / 魔猫g 多平台），
-合并为单一安装包，覆盖 8+ 平台的订单捕获与 Excel/CSV 导出。
+合并为单一安装包；早期覆盖 8+ 平台，现收敛为 4 个购物平台的订单捕获与 Excel/CSV 导出。
 
-> **当前在用的 5 个平台**：闲鱼、京东、淘宝、拼多多、美团外卖。
+> **当前在用的 4 个平台**：闲鱼（买/卖）、京东、淘宝、拼多多。
 >
-> **已下架**（2026-10-27 用户要求）：淘宝闪购（原饿了么，网页端已无可用登录入口）、
-> 快手小店、得物、1688。适配器代码与已抓订单都保留，只是不在界面显示；
+> **已下架**：美团外卖（2026-10-29，用户要求「只留 4 个购物平台」）、
+> 淘宝闪购（原饿了么，网页端已无可用登录入口）、快手小店、得物、1688（2026-10-27）。
+> 适配器代码与已抓订单都保留，只是不在界面显示；
 > 要恢复某个平台，把它从 `src/shared/platform-visibility.ts` 的 `HIDDEN_PLATFORMS` 里删掉即可。
 
 > 开发过程中的工单记录（决策依据、平台改版取证过程）**未随仓库发布**，
@@ -16,6 +17,23 @@
 
 > **许可**：可自由使用与修改，**保留作者署名、禁止商业售卖**。
 > 详见 [LICENSE](LICENSE)。作者：**FaustDream** · [项目主页](https://github.com/FaustDream/Reflow)
+
+---
+
+## 下载
+
+最新版在 [Releases](https://github.com/FaustDream/Reflow/releases/latest)：
+
+| 你的系统 | 选这个 |
+|---|---|
+| Windows 10/11 | `Reflow-x.y.z-win-x64.exe`（安装包，装到当前用户目录，**不需要管理员**）或 `Reflow-x.y.z-portable.exe`（免安装） |
+| macOS（Apple Silicon / M 系列） | `Reflow-x.y.z-mac-arm64.dmg` |
+| macOS（Intel） | `Reflow-x.y.z-mac-x64.dmg` |
+| Linux（Debian / Ubuntu） | `Reflow-x.y.z-linux-amd64.deb` |
+| Linux（通用） | `Reflow-x.y.z-linux-x86_64.AppImage`（`chmod +x` 后直接运行） |
+
+安装包**未做代码签名**：Windows 首次运行会弹 SmartScreen，点「更多信息 → 仍要运行」；
+macOS 首次打开要右键 →「打开」。各文件的 SHA256 见 Release 页的 `SHA256SUMS.txt`。
 
 ---
 
