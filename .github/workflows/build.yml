@@ -1,9 +1,12 @@
 name: 打包三平台
 
-# 本机只能打 Windows（macOS 的 .app/.dmg 必须在 macOS 上构建），
-# 所以 macOS / Linux 的原生产物走这个工作流：
-#   Actions → 打包三平台 → Run workflow
-# 或推一个 v* tag 触发，产物在每次运行的 Artifacts 里。
+# 触发方式：
+#   1) 手动：Actions → 打包三平台 → Run workflow（只出产物，不发版）
+#   2) 推 tag：`git push origin v0.2.0` → 构建 + 自动创建 GitHub Release
+#
+# 为什么 mac/linux 要走 CI：macOS 的 .app 必须在 macOS 上构建并签名
+# （改完 bundle 不重签会被判「已损坏」），Linux 的 AppImage 需要 mksquashfs。
+# 本机（Windows）只能出 win 的 nsis/portable 和 linux 的 tar.gz。
 
 on:
   workflow_dispatch:
@@ -50,6 +53,20 @@ jobs:
           node-version: 22
           cache: npm
 
+      # 发版一致性：tag 与 package.json 的 version 必须对得上，
+      # 否则 Release 上会出现「标签 v0.2.1、包内版本 0.2.0」这种错位
+      - name: 校验 tag 与 package.json 版本一致
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::tag v$TAG 与 package.json 的 $PKG 不一致，先把版本号改齐再打 tag"
+            exit 1
+          fi
+          echo "版本一致：v$TAG"
+
       - name: 安装依赖
         run: npm ci
 
@@ -89,3 +106,51 @@ jobs:
             dist-release/*.deb
             dist-release/*.tar.gz
             dist-release/*.blockmap
+
+  # 只在推 tag 时跑：把三个平台的产物汇总成一个 GitHub Release
+  release:
+    name: 发布 Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 汇总产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: 生成发布说明（取自 docs/CHANGELOG.md）
+        run: node scripts/release-notes.mjs "${GITHUB_REF_NAME#v}" > release-notes.md
+
+      - name: 生成校验值
+        working-directory: artifacts
+        run: |
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: 创建或更新 Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="$GITHUB_REF_NAME"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG 已存在，覆盖上传资产"
+            gh release upload "$TAG" artifacts/* --clobber
+          else
+            gh release create "$TAG" artifacts/* \
+              --title "回流 Reflow $TAG" \
+              --notes-file release-notes.md \
+              --verify-tag
+          fi
+          gh release view "$TAG" --json url -q .url
