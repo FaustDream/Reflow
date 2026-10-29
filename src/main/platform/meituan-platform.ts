@@ -121,7 +121,7 @@ export const meituanPlatformAdapter: PlatformAdapter = {
       { name: 'token', domainIncludes: 'meituan.com' }
     ],
     userIdCookie: 'userId',
-    nicknameCookie: 'u'
+    nicknameCookies: ['u']
   },
   matchRules: [
     // 美团综合订单接口

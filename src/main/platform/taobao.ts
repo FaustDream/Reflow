@@ -193,7 +193,8 @@ export const taobaoAdapter: PlatformAdapter = {
       { name: 'tracknick', domainIncludes: 'taobao.com' }
     ],
     userIdCookie: 'unb',
-    nicknameCookie: 'tracknick'
+    // tracknick 由登录页写，_nk_ 由 m.taobao.com 写；两者不一定同时存在
+    nicknameCookies: ['tracknick', '_nk_']
   },
   matchRules: [
     // 大小写不敏感匹配（原版 isBoughtListMtopUrl 用 toLowerCase）

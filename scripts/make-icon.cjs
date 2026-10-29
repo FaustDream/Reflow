@@ -20,7 +20,7 @@ app.setPath('userData', path.join(os.tmpdir(), `reflow-icon-${Date.now()}`))
 app.on('window-all-closed', () => {})
 
 const SIZE = 1024
-const SIZES = [256, 128, 64, 48, 32, 16]
+const SIZES = [512, 256, 128, 64, 48, 32, 16]
 /** 32 及以下用简化版 */
 const SIMPLE_MAX = 32
 
@@ -126,7 +126,11 @@ app.whenReady().then(async () => {
       const src = s <= SIMPLE_MAX ? simple : full
       const png = src.resize({ width: s, height: s, quality: 'best' }).toPNG()
       fs.writeFileSync(path.join(outDir, `icon-${s}.png`), png)
-      frames.push({ size: s, png })
+      // electron-builder 找 Linux 图标只认 `<宽>x<高>.png` 这种命名，
+      // 缺了会退回默认 Electron 图标（并在 AppImage 阶段报 undefined.file）
+      fs.writeFileSync(path.join(outDir, `${s}x${s}.png`), png)
+      // ICO 只放 256 及以下：更大的帧写进 ICO 会把尺寸字段压成 0，Windows 上显示会乱
+      if (s <= 256) frames.push({ size: s, png })
     }
 
     // 打包 ICO：全部用 PNG 帧（Vista 起支持，Win10/11 显示正常）

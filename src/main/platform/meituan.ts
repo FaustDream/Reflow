@@ -230,7 +230,7 @@ export const meituanAdapter: PlatformAdapter = {
       { name: 'token', domainIncludes: 'meituan.com' }
     ],
     userIdCookie: 'userId',
-    nicknameCookie: 'u'
+    nicknameCookies: ['u']
   },
   matchRules: [
     // 原版：URL 含 https://wx.waimai.meituan.com（宽匹配），结构由 parse 内的 digestlist 判定

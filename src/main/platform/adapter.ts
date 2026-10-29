@@ -54,8 +54,17 @@ export interface LoginDescriptor {
   mode?: 'all' | 'any'
   /** 取哪个 Cookie 的值作为账号标识（不填则仅标记已登录，不暴露令牌值） */
   userIdCookie?: string
-  /** 取哪个 Cookie 的值作为昵称（会做一次 URL 解码，如淘宝 _nk_） */
-  nicknameCookie?: string
+  /**
+   * 取哪个 Cookie 的值作为昵称，**按顺序取第一个非空**。
+   *
+   * 各平台昵称存放位置不统一，而且同名 Cookie 在不同入口下可能缺席：
+   * - 京东 `unick`
+   * - 淘宝 `tracknick`（登录页写）或 `_nk_`（m.taobao.com 写），只配一个就会出现「登录了但没昵称」
+   * - 拼多多 `pdd_user_name`
+   *
+   * 值会做一次 URL 解码 + `\uXXXX` 还原（淘宝的 tracknick 常是 `%5Cu58A8%5Cu8FF9` 这种转义形态）。
+   */
+  nicknameCookies?: string[]
 }
 
 /**

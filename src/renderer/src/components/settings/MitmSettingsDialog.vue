@@ -1,6 +1,12 @@
 <template>
   <el-dialog v-model="visible" title="抓取通道（MITM）" width="640px" @open="refresh">
-    <div class="warn-box">
+    <div v-if="status && status.supported === false" class="unsupported-box">
+      <b>当前平台（{{ platformName }}）不支持 MITM 通道。</b>
+      系统代理与根证书安装只做了 Windows 实现（改动都落在当前用户范围，不需要管理员）。
+      macOS / Linux 上需要提权改系统设置，与本应用「不要管理员权限」的约束冲突，因此不提供。
+      默认的 <b>WebView 注入通道不受影响</b>，抓取、导出照常可用。
+    </div>
+    <div v-else class="warn-box">
       <b>开启后会修改系统代理，并安装一张仅本机信任的根证书。</b>
       证书只装在「当前用户」存储（不需要管理员），只解密下列订单域名；
       其它网站的流量一律隧道透传、不解密不记录。关闭应用或点「关闭并还原」会自动恢复。
@@ -50,9 +56,11 @@
 
     <template #footer>
       <div class="footer">
-        <el-button v-if="!status?.certInstalled" size="small" @click="onInstallCert">安装证书</el-button>
+        <el-button v-if="supported && !status?.certInstalled" size="small" @click="onInstallCert">
+          安装证书
+        </el-button>
         <el-button
-          v-else-if="!status?.running"
+          v-else-if="supported && !status?.running"
           size="small"
           text
           type="danger"
@@ -67,7 +75,7 @@
           v-else
           size="small"
           type="primary"
-          :disabled="!status?.certInstalled"
+          :disabled="!supported || !status?.certInstalled"
           @click="onEnable"
         >
           开启 MITM 抓取
@@ -84,7 +92,7 @@
  * 设计原则：把「会改什么、能还原、只解密哪些域名」写在最显眼的位置。
  * 未装证书时「开启」按钮不可点 —— 避免开了代理却没有证书，导致整机 HTTPS 报错。
  */
-import { onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { MitmStatus } from '@shared/types'
 
@@ -93,6 +101,17 @@ const status = ref<MitmStatus | null>(null)
 const busy = ref(false)
 const testing = ref(false)
 const selftest = ref<{ ok: boolean; text: string } | null>(null)
+
+/** 平台是否支持 MITM（Windows 才有系统代理 + 证书安装实现） */
+const supported = computed(() => status.value?.supported !== false)
+
+const platformName = computed(() => {
+  const uaData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData
+  const p = (uaData?.platform || navigator.platform || '').toLowerCase()
+  if (p.includes('mac')) return 'macOS'
+  if (p.includes('linux')) return 'Linux'
+  return 'Windows'
+})
 
 async function refresh(): Promise<void> {
   try {
@@ -199,6 +218,16 @@ async function onDisable(): Promise<void> {
   border-radius: 6px;
   background: var(--el-color-warning-light-9);
   color: var(--el-color-warning-dark-2);
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.unsupported-box {
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--el-color-info-light-9);
+  color: var(--el-text-color-regular);
   font-size: 12px;
   line-height: 1.6;
   margin-bottom: 12px;

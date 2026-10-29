@@ -89,6 +89,8 @@ export interface AdapterSummary {
 export interface MitmStatus {
   running: boolean
   port: number
+  /** 当前平台是否支持 MITM 通道（系统代理 + 根证书安装目前仅 Windows 实现） */
+  supported: boolean
   certInstalled: boolean
   systemProxy: { enabled: boolean; server: string }
   whitelist: string[]
@@ -99,7 +101,7 @@ export interface MitmStatus {
 
 export interface MitmResult {
   ok: boolean
-  reason?: 'cert-missing' | 'start-failed' | 'cert-install-failed'
+  reason?: 'cert-missing' | 'start-failed' | 'cert-install-failed' | 'unsupported'
   message?: string
 }
 

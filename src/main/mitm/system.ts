@@ -19,6 +19,19 @@ import { caCertPath } from './certs'
 const REG_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings'
 const CERT_CN = 'Reflow Local MITM CA'
 
+/**
+ * 当前平台是否支持「系统代理 + 根证书」这套改动。
+ *
+ * 只有 Windows 实现，且全部落在当前用户范围（HKCU / certutil -user），不需要管理员。
+ * macOS（networksetup / security add-trusted-cert）与 Linux（update-ca-certificates、NSS）
+ * 都需要提权或改系统库，与本项目「不装根证书到系统、不要管理员权限」的硬约束冲突，
+ * 因此这两个平台直接判定为不支持 —— 默认的 WebView 注入通道不受影响，
+ * 只是少一条可选的 MITM 通道。
+ */
+export function mitmSupported(): boolean {
+  return process.platform === 'win32'
+}
+
 export interface ProxySnapshot {
   enabled: boolean
   server: string
@@ -82,6 +95,7 @@ function regSet(value: string, type: 'REG_DWORD' | 'REG_SZ', data: string): void
 }
 
 export function readProxy(): ProxySnapshot {
+  if (!mitmSupported()) return { enabled: false, server: '', override: '' }
   const enabled = regQuery('ProxyEnable') === '0x1'
   return {
     enabled,
@@ -91,6 +105,9 @@ export function readProxy(): ProxySnapshot {
 }
 
 export function applyProxy(server: string): void {
+  if (!mitmSupported()) {
+    throw new Error('当前平台不支持修改系统代理（仅 Windows 支持）')
+  }
   regSet('ProxyServer', 'REG_SZ', server)
   // 本机/内网地址不走代理，避免本地服务被自己拦住
   regSet('ProxyOverride', 'REG_SZ', '<local>;127.0.0.1;localhost')
@@ -98,6 +115,7 @@ export function applyProxy(server: string): void {
 }
 
 export function restoreProxy(snapshot: ProxySnapshot | null): void {
+  if (!mitmSupported()) return
   if (!snapshot) {
     regSet('ProxyEnable', 'REG_DWORD', '0')
     return
@@ -109,6 +127,7 @@ export function restoreProxy(snapshot: ProxySnapshot | null): void {
 
 /** 证书是否已在「当前用户/受信任的根证书颁发机构」里 */
 export function isCertInstalled(): boolean {
+  if (!mitmSupported()) return false
   try {
     const out = execFileSync('certutil', ['-user', '-store', 'Root'], {
       encoding: 'latin1', // 中文 Windows 输出是 GBK；这里只匹配 ASCII 的 CN
@@ -122,6 +141,9 @@ export function isCertInstalled(): boolean {
 
 /** 安装 CA（当前用户，不需要管理员） */
 export function installCert(): void {
+  if (!mitmSupported()) {
+    throw new Error('当前平台不支持自动安装根证书（仅 Windows 支持）')
+  }
   const path = caCertPath()
   if (!existsSync(path)) throw new Error(`CA 证书不存在：${path}`)
   execFileSync('certutil', ['-addstore', '-user', 'Root', path], {
@@ -132,6 +154,7 @@ export function installCert(): void {
 
 /** 删除 CA（按 CN 删；重复删不报错） */
 export function removeCert(): void {
+  if (!mitmSupported()) return
   try {
     execFileSync('certutil', ['-delstore', '-user', 'Root', CERT_CN], {
       stdio: 'ignore',
@@ -147,6 +170,7 @@ export function removeCert(): void {
  * @returns 是否执行过还原
  */
 export function recoverIfNeeded(): boolean {
+  if (!mitmSupported()) return false
   const state = loadState()
   if (!state.enabled) return false
   try {

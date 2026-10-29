@@ -63,7 +63,7 @@ function collectArtifacts() {
     return []
   }
   return readdirSync(DIST)
-    .filter((f) => /\.(exe|yml|blockmap)$/.test(f))
+    .filter((f) => /\.(exe|dmg|zip|AppImage|deb|tar\.gz|blockmap|yml)$/.test(f))
     .map((f) => {
       const full = join(DIST, f)
       return { name: f, size: statSync(full).size, sha256: sha256(full) }
@@ -119,10 +119,10 @@ if (artifacts.length) {
     console.log(`    大小: ${mb(a.size)} MB  SHA256: ${a.sha256.slice(0, 16)}…`)
   }
 
-  // 体积预算（028）
-  const installer = artifacts.find((a) => a.name.endsWith('.exe'))
-  if (installer && installer.size / 1024 / 1024 > 95) {
-    console.error(`\n✗ 安装包 ${mb(installer.size)} MB 超出 95MB 预算`)
+  // 体积预算（028，2026-10 重新打包后按实际产物上调：asar 含 exceljs/@jsquash 约 21MB）
+  const installer = artifacts.find((a) => a.name.endsWith('.exe') && !a.name.includes('portable'))
+  if (installer && installer.size / 1024 / 1024 > 130) {
+    console.error(`\n✗ 安装包 ${mb(installer.size)} MB 超出 130MB 预算`)
     process.exit(1)
   }
 }

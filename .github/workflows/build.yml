@@ -1,0 +1,88 @@
+name: 打包三平台
+
+# 本机只能打 Windows（macOS 的 .app/.dmg 必须在 macOS 上构建），
+# 所以 macOS / Linux 的原生产物走这个工作流：
+#   Actions → 打包三平台 → Run workflow
+# 或推一个 v* tag 触发，产物在每次运行的 Artifacts 里。
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows x64（nsis + 免安装）
+            args: --win
+          - os: macos-latest
+            label: macOS（x64 + arm64）
+            args: --mac
+          - os: ubuntu-latest
+            label: Linux x64（AppImage + deb）
+            args: --linux
+
+    env:
+      # 海外 runner 可以删掉这两个镜像变量
+      ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
+      ELECTRON_BUILDER_BINARIES_MIRROR: https://npmmirror.com/mirrors/electron-builder-binaries/
+      # 未做代码签名，别让 electron-builder 去找证书
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      # 私钥不入库，CI 上现生成；openssl 缺失时跳过，MITM 通道会退化为不可用，
+      # 其余抓取（WebView 注入通道）不受影响
+      - name: 生成内置 MITM 证书
+        continue-on-error: true
+        run: node scripts/gen-mitm-certs.mjs
+
+      - name: 类型检查
+        run: npm run typecheck
+
+      - name: 单元测试
+        run: npm test
+
+      - name: 构建主进程 / preload / 渲染层
+        run: npx electron-vite build
+
+      - name: 打包
+        run: npx electron-builder ${{ matrix.args }} --publish never
+
+      # Windows 宿主打的 tar 不带可执行位，Linux 上解压后跑不起来
+      - name: 修正 tar 可执行位
+        if: matrix.os == 'ubuntu-latest'
+        run: node scripts/fix-linux-tar.mjs dist-release/*.tar.gz || true
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflow-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            dist-release/*.exe
+            dist-release/*.dmg
+            dist-release/*.zip
+            dist-release/*.AppImage
+            dist-release/*.deb
+            dist-release/*.tar.gz
+            dist-release/*.blockmap
