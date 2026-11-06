@@ -21,6 +21,12 @@ export interface TaobaoFetchAllRaw {
   orders: Array<Record<string, unknown>>
   /** 实际扫描到的月份数（按月分段抓取） */
   months?: number
+  /** 命中平台限流/人机验证而中止（2026-10-30 风控加固） */
+  risk?: boolean
+  /** 触及主进程下发的当日请求预算上限而收尾 */
+  budgetCapped?: boolean
+  /** 脚本实际发出的 mtop 请求数（事后记账用） */
+  calls?: number
 }
 
 /** 页面内执行：**按月分段**逐页拉全部订单（自包含，可 toString 注入）。
@@ -37,6 +43,10 @@ export interface TaobaoFetchAllRaw {
  */
 export const TAOBAO_FETCH_ALL_SCRIPT = `(async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+  // 2026-10-30 风控加固：主进程执行前注入当日预算上限与本地已知单号集合
+  const cfg = window.__reflowFetchCfg || {}
+  const known = cfg.knownIds ? new Set(cfg.knownIds) : null
+  let calls = 0
   const pad2 = (n) => String(n).padStart(2, '0')
   const fmt = (ts) => {
     const d = new Date(ts)
@@ -98,17 +108,27 @@ export const TAOBAO_FETCH_ALL_SCRIPT = `(async () => {
 
   // 全量分页：接口一次返回 totalPage，逐页拉完即可（实测 34 页 / 504 单）
   for (;;) {
+    // 守卫 D：当日预算用完即收尾，把已抓到的交出去
+    if (cfg.maxRequests && calls >= cfg.maxRequests) {
+      return { error: null, orders: Array.from(map.values()), months: page, budgetCapped: true, calls }
+    }
+    calls += 1
     // 单页失败重试：mtop 偶发超时/风控，直接 break 会导致只抓到前几页（实测停在 62 单）
     let res = null
     for (let attempt = 0; attempt < 3; attempt++) {
       res = await callMtop(page)
       const ok = res && !res.__err && res.data && res.data.result
       if (ok) break
-      await sleep(1500)
+      await sleep(1200 + Math.random() * 800)
+    }
+    // 守卫 B：限流/人机验证信号立即中止并报主进程进冷却，不对着墙重试
+    const retStr = JSON.stringify((res && (res.ret || res.__err)) || '')
+    if (/FAIL_SYS_TRAFFIC_LIMIT|FAIL_SYS_FLOW_LIMIT|FAIL_SYS_USER_VALIDATE|RGV587|FAIL_SYS_API_STOP_SERVICE/i.test(retStr)) {
+      return { error: null, risk: true, orders: Array.from(map.values()), months: page, calls }
     }
     if (res && res.__err) {
       // 出错时把已抓到的交出去，不要整批丢掉
-      return { error: JSON.stringify(res.__err).slice(0, 120), orders: Array.from(map.values()), months: page }
+      return { error: JSON.stringify(res.__err).slice(0, 120), orders: Array.from(map.values()), months: page, calls }
     }
     let parsed = null
     const rawResult = res && res.data && res.data.result
@@ -124,13 +144,15 @@ export const TAOBAO_FETCH_ALL_SCRIPT = `(async () => {
     for (const m of list) {
       if (m && m.id) map.set(String(m.id), m)
     }
+    // 守卫 A：整页单号都已在本地缓存 → 更深的页必然已覆盖，提前停
+    if (known && list.length && list.every((m) => m && known.has(String(m.id)))) break
     totalPage = (parsed.page && parsed.page.totalPage) || 1
     if (page >= totalPage || page >= 120) break
     page++
-    await sleep(1100)
+    await sleep(800 + Math.random() * 900)
   }
 
-  return { error: null, orders: Array.from(map.values()), months: totalPage }
+  return { error: null, orders: Array.from(map.values()), months: totalPage, calls }
 })()`
 
 /** 单条原始订单 → 我们的 Order（字段路径全部容错） */

@@ -25,7 +25,22 @@ export function setupLoginIpc(getMainWindow: () => BrowserWindow | null): QrLogi
   // 状态推送渲染层（只推状态文本，不含凭据）
   service.on('status', (payload: QrLoginStatus & { id: string; platformId: string }) => {
     const win = getMainWindow()
-    if (win && !win.isDestroyed()) win.webContents.send('login:status', payload)
+    if (!win || win.isDestroyed()) return
+    win.webContents.send('login:status', payload)
+    /**
+     * 2026-10-30 修复「扫码成功却不自动抓、侧栏仍显示未登录」：
+     * 二维码登录成功时同步一条平台登录态事件。渲染层「登录成功 → 导航订单页 →
+     * 后台抓取/翻页」的统一收尾挂在 platformsStore 的 loggedIn 翻转上，而该状态
+     * 只认 platform:event —— 之前这里只发 login:status，dom 通道（京东/拼多多）
+     * 成功后没有任何 hooked 页面加载来补这条事件，自动链路就此断掉。
+     */
+    if (payload.state === 'success') {
+      win.webContents.send('platform:event', {
+        platform: payload.platformId,
+        type: 'login',
+        ts: Date.now()
+      })
+    }
   })
 
   ipcMain.handle('login:capabilities', () => {

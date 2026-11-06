@@ -17,6 +17,11 @@ export interface TaobaoFetchOptions {
   months?: number
   maxPagesPerMonth?: number
   delayMs?: number
+  /**
+   * 增量抓取（2026-10-30 风控加固）：返回 true 的月份整月跳过、不发任何请求。
+   * 编排层用「本地缓存已覆盖且不属于近 N 个月」判定；强制全量时不传。
+   */
+  monthCovered?: (monthIndex: number, startTs: number) => boolean
 }
 
 export interface TaobaoMtopRpc {
@@ -121,7 +126,7 @@ export async function fetchTaobaoOrders(
   rpc: TaobaoMtopRpc,
   options: TaobaoFetchOptions,
   handlers: TaobaoFetchHandlers
-): Promise<{ months: number; pages: number }> {
+): Promise<{ months: number; pages: number; skippedMonths: number }> {
   const months = options.months ?? 12
   const maxPages = options.maxPagesPerMonth ?? 50
   const sleep = handlers.sleep ?? sleepDefault
@@ -129,8 +134,14 @@ export async function fetchTaobaoOrders(
   const now = new Date()
 
   let pages = 0
+  let skippedMonths = 0
   for (let m = 0; m < months; m++) {
     const { start, end } = monthRange(now, m)
+    // 增量：本地缓存已覆盖的旧月整月跳过（零请求）
+    if (options.monthCovered?.(m, start)) {
+      skippedMonths += 1
+      continue
+    }
     let hasMore = true
     let page = 1
 
@@ -154,5 +165,5 @@ export async function fetchTaobaoOrders(
     if (m < months - 1) await sleep(delay)
   }
 
-  return { months, pages }
+  return { months, pages, skippedMonths }
 }

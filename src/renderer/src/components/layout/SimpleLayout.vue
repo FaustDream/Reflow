@@ -196,6 +196,18 @@
             <el-option label="近 30 天" value="30" />
             <el-option label="近 90 天" value="90" />
           </el-select>
+          <!-- 2026-10-30：自定义日期范围，纯本地过滤已抓取订单，零新增请求 -->
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            size="small"
+            class="filter-dates"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            clearable
+          />
           <el-select v-model="statusFilter" size="small" class="filter-status" placeholder="全部状态">
             <el-option label="全部状态" value="" />
             <el-option
@@ -395,6 +407,7 @@ import { useOrdersStore } from '@renderer/stores/orders'
 import { usePlatformsStore } from '@renderer/stores/platforms'
 import type { AdapterSummary, Order } from '@shared/types'
 import { HIDDEN_PLATFORMS } from '@shared/platform-visibility'
+import { inDateRange } from '@shared/date-range'
 import { bizLineOf } from '@renderer/utils/order-stats'
 
 defineProps<{
@@ -462,6 +475,15 @@ const xianyuSeller = ref(false)
 const keyword = ref('')
 const timeRange = ref<'all' | '7' | '30' | '90'>('all')
 const statusFilter = ref('')
+/** 自定义日期范围（['YYYY-MM-DD','YYYY-MM-DD']，含起止当天）；与快捷时间互斥 */
+const dateRange = ref<[string, string] | null>(null)
+// 选了自定义范围就忽略快捷时间；点了快捷时间就清掉自定义范围，避免两个条件叠加出困惑
+watch(dateRange, (v) => {
+  if (v && v.length === 2 && timeRange.value !== 'all') timeRange.value = 'all'
+})
+watch(timeRange, (v) => {
+  if (v !== 'all' && dateRange.value) dateRange.value = null
+})
 const selectedOrders = ref<Order[]>([])
 const tableRef = ref<{ clearSelection: () => void } | null>(null)
 const exportVisible = ref(false)
@@ -860,7 +882,8 @@ const filteredOrders = computed<Order[]>(() => {
   const kw = keyword.value.trim().toLowerCase()
   const cutoff = timeCutoff.value
   const status = statusFilter.value
-  if (!kw && cutoff === null && !status) return currentOrders.value
+  const range = dateRange.value && dateRange.value.length === 2 ? dateRange.value : null
+  if (!kw && cutoff === null && !status && !range) return currentOrders.value
 
   return currentOrders.value.filter((o) => {
     if (status && o.status !== status) return false
@@ -869,6 +892,8 @@ const filteredOrders = computed<Order[]>(() => {
       // 时间筛选下「无下单时间」的订单无法判断，按不符合处理（避免混进错误区间）
       if (t === null || t < cutoff) return false
     }
+    // 自定义日期范围：纯本地字符串比较，含起止当天；无下单时间同样按不符合处理
+    if (range && !inDateRange(o.createdAt, range[0], range[1])) return false
     if (!kw) return true
     return (
       o.orderId.toLowerCase().includes(kw) ||
@@ -882,7 +907,11 @@ const filteredOrders = computed<Order[]>(() => {
 })
 
 const hasFilter = computed(
-  () => Boolean(keyword.value.trim()) || timeRange.value !== 'all' || Boolean(statusFilter.value)
+  () =>
+    Boolean(keyword.value.trim()) ||
+    timeRange.value !== 'all' ||
+    Boolean(statusFilter.value) ||
+    Boolean(dateRange.value && dateRange.value.length === 2)
 )
 
 /** 状态下拉：只列当前平台真实出现过的状态（带条数） */
@@ -920,6 +949,7 @@ function resetFilters(): void {
   keyword.value = ''
   timeRange.value = 'all'
   statusFilter.value = ''
+  dateRange.value = null
 }
 
 function onSelectionChange(rows: Order[]): void {
@@ -1212,17 +1242,40 @@ async function startAutoCapture(): Promise<void> {
       await new Promise((r) => setTimeout(r, 1500))
     }
 
-    // 2a. 有代码侧接口翻页：直接全量抓（响应复用捕获引擎，最快最稳，页面无需可见）
+    // 2a-淘宝专用（2026-10-30 修复「登录后只有 30 条」）：
+    // OrderFilter+按月过滤的接口实测只回空数组（见 taobao-v2-fetch 注释），
+    // 原先这里走的 orders:fetch-all 淘宝分支正是那条坏通道，主动抓取颗粒无收，
+    // 只剩订单页首屏被动捕获的约 30 条。统一改用已验证的页内全量分页通道
+    // （自带 SDK 就绪等待、增量早停与风控守卫）。
+    if (fetchPlatform === 'taobao') {
+      try {
+        const r = await window.api.taobaoFetchAll(webviewId.value)
+        if (r.ok) {
+          await ordersStore.reloadCache()
+          ordersStore.markSynced('taobao')
+          const n = ordersStore.byPlatform['taobao']?.length ?? 0
+          ElNotification.success({
+            title: '订单已全部加载完成',
+            message: `淘宝：本地共 ${n} 单`,
+            duration: 8000
+          })
+        } else {
+          ElMessage.warning(r.message ?? '淘宝全量抓取失败')
+        }
+        return
+      } catch (err) {
+        ElMessage.warning(`淘宝抓取未完成：${err instanceof Error ? err.message : String(err)}`)
+        return
+      }
+    }
+
+    // 2a. 其它代码侧接口翻页平台（闲鱼买/卖等）：直接全量抓
     if (FETCH_PLATFORMS.has(fetchPlatform)) {
       try {
-        // 京东已不在接口抓取之列（订单页 SPA 化），这里只剩淘宝按月分批
-        // 淘宝只按「近 12 个月」抓会把历史订单切掉（用户反馈「不可能才几十单」），
-        // 放宽到 60 个月（5 年），与京东的覆盖口径对齐；接口本身支持按月翻页，只是慢一些。
-        const options = fetchPlatform === 'taobao' ? { months: 60 } : undefined
         const result = await window.api.fetchAllOrders(
           fetchPlatform as 'jd' | 'taobao' | 'xianyu' | 'xianyu-sold',
           webviewId.value,
-          options
+          undefined
         )
         if (result.ok) {
           const n = ordersStore.byPlatform[fetchPlatform]?.length ?? 0
@@ -1235,8 +1288,12 @@ async function startAutoCapture(): Promise<void> {
           ElMessage.warning(result.message)
         }
         return
-      } catch {
-        // 抓取失败不阻断：页面已停在订单页，用户手动浏览仍会触发被动捕获
+      } catch (err) {
+        // 失败可见化（原来是静默 catch，用户只能看到首屏被动捕获的少量订单）
+        ElMessage.warning(
+          `抓取未完成：${err instanceof Error ? err.message : String(err)}（可手动浏览页面，被动捕获仍生效）`
+        )
+        return
       }
     }
 
@@ -1680,6 +1737,11 @@ onMounted(() => {
 
 .filter-time {
   width: 104px;
+  flex: none;
+}
+
+.filter-dates {
+  width: 240px;
   flex: none;
 }
 

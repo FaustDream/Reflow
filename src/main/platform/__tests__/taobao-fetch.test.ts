@@ -46,7 +46,7 @@ describe('淘宝主动抓取编排（移植 preload-index.js getAllOrders）', (
       { months: 2, delayMs: 0 },
       { onResponse: (body) => responses.push(body) }
     )
-    expect(result).toEqual({ months: 2, pages: 3 })
+    expect(result).toEqual({ months: 2, pages: 3, skippedMonths: 0 })
     expect(responses).toHaveLength(3)
     // 首次请求携带 tborder 应用标记与 condition
     const firstOptions = mtop.mock.calls[0][0]
@@ -73,5 +73,26 @@ describe('淘宝主动抓取编排（移植 preload-index.js getAllOrders）', (
       { onResponse: () => {} }
     )
     expect(mtop).toHaveBeenCalledTimes(1)
+  })
+
+  it('增量：monthCovered 命中的月份整月零请求（2026-10-30 风控加固）', async () => {
+    const mtop = vi.fn().mockResolvedValue(pageResponse(false, 1))
+    const seen: number[] = []
+    const result = await fetchTaobaoOrders(
+      { mtop },
+      {
+        months: 4,
+        delayMs: 0,
+        monthCovered: (m) => {
+          seen.push(m)
+          return m >= 2 // 第 3、4 个月本地已覆盖
+        }
+      },
+      { onResponse: () => {} }
+    )
+    expect(seen).toEqual([0, 1, 2, 3])
+    expect(result.skippedMonths).toBe(2)
+    expect(result.pages).toBe(2) // 只有前两个月各发了 1 页
+    expect(mtop).toHaveBeenCalledTimes(2)
   })
 })

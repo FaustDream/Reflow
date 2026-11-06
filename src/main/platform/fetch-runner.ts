@@ -10,6 +10,24 @@
  */
 import { ipcMain, webContents, type BrowserWindow } from 'electron'
 import { bgReloadPlatform } from '../bg-fetch'
+import {
+  BudgetExceededError,
+  CooldownActiveError,
+  EarlyStopError,
+  RiskControlError,
+  addUsage,
+  assertCooldown,
+  budgetLeft,
+  chargeRequest,
+  coveredMonthKeys,
+  detectRiskStatus,
+  detectRiskText,
+  humanGap,
+  monthKeyOfRangeStart,
+  restEvery,
+  restGap,
+  setCooldown
+} from './fetch-guard'
 import { loadPlatformCache, savePlatformCache } from '../order-cache'
 import { dispatchPageFetch, dispatchPageSdkRequest } from '../page-sdk'
 import {
@@ -46,6 +64,18 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
+/**
+ * mtop/页面返回的头部字符串化，供风控扫描。
+ * ret 码在 data 之前，4KB 头部足够覆盖；整页订单体不进入扫描串。
+ */
+function safeHead(value: unknown): string {
+  try {
+    return JSON.stringify(value ?? '').slice(0, 4000)
+  } catch {
+    return ''
+  }
+}
+
 /** 用户取消时抛出，用于从编排循环中跳出 */
 class FetchCancelledError extends Error {
   constructor() {
@@ -71,13 +101,13 @@ export function setupOrdersFetchIpc({ getMainWindow, engine }: FetchRunnerOption
     }
   }
 
-  /** 把主动抓取的一页响应按被动捕获的同样路径喂给引擎 */
+  /** 把主动抓取的一页响应按被动捕获的同样路径喂给引擎；返回引擎判定供增量早停使用 */
   const ingest = (
     body: unknown,
     url: string,
     kind: CaptureReport['kind'],
     method: string
-  ): void => {
+  ): ReturnType<CaptureEngine['handleReport']> => {
     const report: CaptureReport = { kind, url, method, status: 200, body, ts: Date.now() }
     const outcome = engine.handleReport(report, -1)
     const win = getMainWindow()
@@ -87,6 +117,7 @@ export function setupOrdersFetchIpc({ getMainWindow, engine }: FetchRunnerOption
     } else if (outcome.type === 'error') {
       win?.webContents.send('capture:parse-error', { ...outcome.error, webviewId: -1 })
     }
+    return outcome
   }
 
   ipcMain.handle(
@@ -101,11 +132,79 @@ export function setupOrdersFetchIpc({ getMainWindow, engine }: FetchRunnerOption
         /** 京东：range='all' 时追溯的年数 */
         years?: number
         months?: number
+        /** 强制全量：跳过增量早停与月份跳过，重请求所有页（本地数据自愈用） */
+        full?: boolean
       }
     ): Promise<{ ok: boolean; message?: string; cancelled?: boolean }> => {
       const { platform, webviewId } = payload
       cancelFlags.delete(platform)
       emit({ platform, phase: 'started' })
+
+      // 守卫 B：冷却期内拒绝触发（撞过限流后正确行为是退让，不是重试）
+      try {
+        assertCooldown(platform)
+      } catch (err) {
+        if (err instanceof CooldownActiveError) {
+          emit({ platform, phase: 'completed', ok: false, message: err.message })
+          return { ok: false, message: err.message }
+        }
+        throw err
+      }
+
+      // 守卫 A：本地缓存快照 → 页级早停 + 月份跳过；强制全量时两者都 bypass
+      const full = payload.full === true
+      const cachedOrders = full ? [] : await loadPlatformCache(platform)
+      const cacheIds = new Set(
+        cachedOrders.filter((o) => o.orderId).map((o) => o.orderId as string)
+      )
+      const nowD = new Date()
+      const coveredKeys = coveredMonthKeys(
+        cachedOrders,
+        (m) => new Date(nowD.getFullYear(), nowD.getMonth() - m, 1).getTime(),
+        payload.months ?? 12
+      )
+      let earlyStop = false
+      let pagesSeen = 0
+      let nextRestAt = restEvery()
+
+      /**
+       * 守卫 A 页级早停：整页单号都已在本地缓存（或整页都是本会话重复）时，
+       * 更深的页必然更旧、必然已覆盖，继续翻页只是白白打请求。
+       */
+      const ingestGuarded = (body: unknown, url: string, method: string): void => {
+        const outcome = ingest(body, url, 'xhr', method)
+        if (full || earlyStop) return
+        if (outcome.type !== 'ok' || !outcome.event) return
+        const orders = outcome.event.orders ?? []
+        const withId = orders.filter((o) => o.orderId)
+        if (withId.length && withId.every((o) => cacheIds.has(o.orderId as string))) {
+          earlyStop = true
+        } else if (!orders.length && (outcome.event.duplicates ?? 0) > 0) {
+          earlyStop = true
+        }
+      }
+
+      /** 守卫 C：抖动间隔 + 每若干页一次长停顿；取消与早停也在这里收口 */
+      const guardedSleep = async (ms?: number): Promise<void> => {
+        if (cancelFlags.has(platform)) throw new FetchCancelledError()
+        if (earlyStop) throw new EarlyStopError(platform)
+        pagesSeen += 1
+        if (pagesSeen >= nextRestAt) {
+          nextRestAt = pagesSeen + restEvery()
+          await sleep(restGap())
+          return
+        }
+        await sleep(humanGap(ms ?? 500))
+      }
+
+      /** 守卫 B：mtop 返回扫限流/人机验证标记，命中即冷却并中止 */
+      const guardMtopResult = (result: unknown): void => {
+        const marker = detectRiskText(safeHead(result))
+        if (marker) {
+          setCooldown(platform)
+          throw new RiskControlError(platform, marker)
+        }
+      }
 
       try {
         if (platform === 'jd') {
@@ -113,18 +212,24 @@ export function setupOrdersFetchIpc({ getMainWindow, engine }: FetchRunnerOption
             {
               pageGet: async (url) => {
                 if (cancelFlags.has('jd')) throw new FetchCancelledError()
+                chargeRequest('jd')
                 const r = await dispatchPageFetch(webviewId, url)
                 if (!r.ok) throw new Error(r.error ?? '页面请求失败')
+                // 守卫 B：419/420 与风控页文本都算命中
+                const marker =
+                  detectRiskStatus(r.result?.status ?? 0) ??
+                  detectRiskText(String(r.result?.text ?? '').slice(0, 4000))
+                if (marker) {
+                  setCooldown('jd')
+                  throw new RiskControlError('jd', marker)
+                }
                 return r.result!
               }
             },
             { range: payload.range, years: payload.years, delayMs: 500 },
             {
-              sleep: async (ms) => {
-                if (cancelFlags.has('jd')) throw new FetchCancelledError()
-                await sleep(ms)
-              },
-              onResponse: (r) => ingest(r.body, r.url, 'xhr', 'GET'),
+              sleep: guardedSleep,
+              onResponse: (r) => ingestGuarded(r.body, r.url, 'GET'),
               onProgress: (pages) =>
                 emit({ platform, phase: 'progress', pages, message: `已抓取 ${pages} 页` })
             }
@@ -137,29 +242,38 @@ export function setupOrdersFetchIpc({ getMainWindow, engine }: FetchRunnerOption
           return { ok: true }
         }
 
+        /**
+         * @deprecated UI 已统一走 orders:taobao-fetch-all（页内全量分页脚本）：
+         * OrderFilter+按月过滤实测只回空数组（见 taobao-v2-fetch 注释），
+         * 走这里会出现「主动抓取颗粒无收、只剩首屏 30 条」的问题。保留仅供调试。
+         */
         if (platform === 'taobao') {
-          const { months, pages } = await fetchTaobaoOrders(
+          const { months, pages, skippedMonths } = await fetchTaobaoOrders(
             {
               mtop: async (options) => {
                 if (cancelFlags.has('taobao')) {
                   throw new FetchCancelledError()
                 }
+                chargeRequest('taobao')
                 const r = await dispatchPageSdkRequest(webviewId, options)
                 if (!r.ok) throw new Error(r.error ?? '页面 SDK 调用失败')
+                guardMtopResult(r.result)
                 return r.result as never
               }
             },
-            { months: payload.months ?? 12, delayMs: 500 },
             {
-              sleep: async () => {
-                if (cancelFlags.has('taobao')) throw new FetchCancelledError()
-                await sleep(500)
-              },
+              months: payload.months ?? 12,
+              delayMs: 500,
+              // 守卫 A 月级跳过：本地已覆盖且不属于近几个月的月份不再请求
+              monthCovered: (_m: number, startTs: number) =>
+                coveredKeys.has(monthKeyOfRangeStart(startTs))
+            },
+            {
+              sleep: guardedSleep,
               onResponse: (body) =>
-                ingest(
+                ingestGuarded(
                   body,
                   'https://h5api.m.taobao.com/h5/mtop.taobao.order.queryboughtlistV2/1.0/',
-                  'xhr',
                   'POST'
                 ),
               onProgress: (monthIndex, page) =>
@@ -171,12 +285,15 @@ export function setupOrdersFetchIpc({ getMainWindow, engine }: FetchRunnerOption
                 })
             }
           )
+          const skipNote = skippedMonths
+            ? `增量：跳过 ${skippedMonths} 个本地已覆盖月份`
+            : undefined
           if (cancelFlags.has('taobao')) {
             emit({ platform, phase: 'completed', ok: true, cancelled: true, pages, months })
             return { ok: true, cancelled: true }
           }
-          emit({ platform, phase: 'completed', ok: true, pages, months })
-          return { ok: true }
+          emit({ platform, phase: 'completed', ok: true, pages, months, message: skipNote })
+          return { ok: true, message: skipNote }
         }
 
         if (platform === 'xianyu' || platform === 'xianyu-sold') {
@@ -186,24 +303,18 @@ export function setupOrdersFetchIpc({ getMainWindow, engine }: FetchRunnerOption
             {
               mtop: async (options) => {
                 if (cancelFlags.has(platform)) throw new FetchCancelledError()
+                chargeRequest(platform)
                 const r = await dispatchPageSdkRequest(webviewId, options)
                 if (!r.ok) throw new Error(r.error ?? '页面 SDK 调用失败')
+                guardMtopResult(r.result)
                 return r.result as never
               }
             },
             { seller, delayMs: 600 },
             {
-              sleep: async (ms) => {
-                if (cancelFlags.has(platform)) throw new FetchCancelledError()
-                await sleep(ms)
-              },
+              sleep: guardedSleep,
               onResponse: (body) =>
-                ingest(
-                  body,
-                  `https://h5api.m.goofish.com/h5/${api}/1.0/`,
-                  'xhr',
-                  'POST'
-                ),
+                ingestGuarded(body, `https://h5api.m.goofish.com/h5/${api}/1.0/`, 'POST'),
               onProgress: (page) =>
                 emit({ platform, phase: 'progress', pages: page, message: `第 ${page} 页` })
             }
@@ -218,6 +329,16 @@ export function setupOrdersFetchIpc({ getMainWindow, engine }: FetchRunnerOption
 
         return { ok: false, message: `暂不支持平台 ${platform} 的主动抓取` }
       } catch (err) {
+        // 守卫 A：增量早停是成功收尾，不是失败
+        if (err instanceof EarlyStopError) {
+          emit({ platform, phase: 'completed', ok: true, pages: pagesSeen, message: err.message })
+          return { ok: true, message: err.message }
+        }
+        // 守卫 B/D：限流冷却与预算熔断都是明确失败（冷却已在抛出前落盘）
+        if (err instanceof RiskControlError || err instanceof BudgetExceededError) {
+          emit({ platform, phase: 'completed', ok: false, message: err.message })
+          return { ok: false, message: err.message }
+        }
         const cancelled = cancelFlags.has(platform) || err instanceof FetchCancelledError
         const message = cancelled
           ? '已取消'
@@ -252,10 +373,20 @@ export function setupOrdersFetchIpc({ getMainWindow, engine }: FetchRunnerOption
     'orders:taobao-fetch-all',
     async (
       _event,
-      webviewId: number
+      webviewId: number,
+      full?: boolean
     ): Promise<{ ok: boolean; imported: number; totalPage: number; message?: string }> => {
       if (inFlight.has('taobao')) {
         return { ok: false, imported: 0, totalPage: 0, message: '淘宝抓取进行中，请稍候' }
+      }
+      // 守卫 B：冷却期内拒绝触发
+      try {
+        assertCooldown('taobao')
+      } catch (err) {
+        if (err instanceof CooldownActiveError) {
+          return { ok: false, imported: 0, totalPage: 0, message: err.message }
+        }
+        throw err
       }
       inFlight.add('taobao')
       try {
@@ -285,11 +416,43 @@ export function setupOrdersFetchIpc({ getMainWindow, engine }: FetchRunnerOption
           }
         }
 
+        // 守卫 A/D：把本地单号集合与剩余预算传进页内脚本（脚本自限请求数、翻到已知单早停）
+        // full=true（强制全量）时 knownIds 置空，页内脚本不做增量早停
+        const knownIds = full
+          ? []
+          : (await loadPlatformCache('taobao'))
+              .filter((o) => o.orderId)
+              .map((o) => o.orderId as string)
+        const maxRequests = budgetLeft('taobao')
+        if (maxRequests <= 0) {
+          return {
+            ok: false,
+            imported: 0,
+            totalPage: 0,
+            message: new BudgetExceededError('taobao').message
+          }
+        }
+        await contents.executeJavaScript(
+          `window.__reflowFetchCfg = ${JSON.stringify({ maxRequests, knownIds })}`
+        )
+
         const raw = (await withTimeout(
           contents.executeJavaScript(TAOBAO_FETCH_ALL_SCRIPT),
           300_000,
           '淘宝全量抓取'
         )) as TaobaoFetchAllRaw
+        // 守卫 D：页内脚本实际发了多少请求，事后记账
+        if (raw?.calls) addUsage('taobao', raw.calls)
+        // 守卫 B：脚本内识别到限流/人机验证 → 冷却并明确失败
+        if (raw?.risk) {
+          setCooldown('taobao')
+          return {
+            ok: false,
+            imported: 0,
+            totalPage: raw.months ?? 0,
+            message: '命中淘宝限流/人机验证，已自动停止并进入 2 小时冷却'
+          }
+        }
         if (raw?.error) {
           return { ok: false, imported: 0, totalPage: raw.months ?? 0, message: raw.error }
         }
@@ -313,7 +476,12 @@ export function setupOrdersFetchIpc({ getMainWindow, engine }: FetchRunnerOption
         )
         await savePlatformCache('taobao', merged)
         getMainWindow()?.webContents.send('orders:cache-updated', 'taobao')
-        return { ok: true, imported: added, totalPage: raw?.months ?? 1 }
+        return {
+          ok: true,
+          imported: added,
+          totalPage: raw?.months ?? 1,
+          message: raw?.budgetCapped ? '触及当日请求预算上限，提前收尾' : undefined
+        }
       } catch (err) {
         return {
           ok: false,

@@ -182,7 +182,13 @@ const api = {
   fetchAllOrders: (
     platform: 'jd' | 'taobao' | 'xianyu' | 'xianyu-sold',
     webviewId: number,
-    options?: { range?: 'current' | 'all' | number; years?: number; months?: number }
+    options?: {
+      range?: 'current' | 'all' | number
+      years?: number
+      months?: number
+      /** 强制全量：绕过增量早停/月份跳过（2026-10-30 风控加固） */
+      full?: boolean
+    }
   ): Promise<{ ok: boolean; message?: string; cancelled?: boolean }> =>
     ipcRenderer.invoke('orders:fetch-all', { platform, webviewId, ...options }),
   cancelFetchOrders: (
@@ -198,11 +204,12 @@ const api = {
     platform: string
   ): Promise<{ ok: boolean; imported: number; skipped: number; message?: string }> =>
     ipcRenderer.invoke('orders:import-file', platform),
-  /** 淘宝全量抓取：在已登录的主 webview 里调 lib.mtop（魔猫同款做法） */
+  /** 淘宝全量抓取：在已登录的主 webview 里调 lib.mtop（魔猫同款做法）；full=true 绕过增量早停 */
   taobaoFetchAll: (
-    webviewId: number
+    webviewId: number,
+    full?: boolean
   ): Promise<{ ok: boolean; imported: number; totalPage: number; message?: string }> =>
-    ipcRenderer.invoke('orders:taobao-fetch-all', webviewId),
+    ipcRenderer.invoke('orders:taobao-fetch-all', webviewId, full),
   onOrdersFetchEvent: (listener: (payload: OrdersFetchEvent) => void): Unsubscribe =>
     on<OrdersFetchEvent>('orders:fetch-event', listener),
   /** 主进程落盘后通知渲染层重载本地缓存 */

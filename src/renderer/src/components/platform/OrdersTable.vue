@@ -21,6 +21,14 @@
         <el-button v-else size="small" type="warning" plain @click="onCancelFetch">
           停止抓取
         </el-button>
+        <!-- 2026-10-30 风控加固：默认增量（跳过本地已覆盖的旧数据），勾上才重请求所有页 -->
+        <el-checkbox
+          v-model="forceFull"
+          size="small"
+          title="不做增量早停与月份跳过，重新请求所有页。仅在本地数据需要自愈时勾选，平时保持关闭以降低账号风控风险"
+        >
+          强制全量
+        </el-checkbox>
       </template>
       <el-button size="small" text type="danger" :disabled="!rows.length" @click="onClear">
         清空
@@ -171,6 +179,8 @@ const store = useOrdersStore()
 
 const exporting = ref(false)
 const fetchingDetails = ref(false)
+/** 强制全量：绕过增量早停/月份跳过（本地数据自愈用），默认关闭以控制请求量 */
+const forceFull = ref(false)
 
 const rows = computed<Order[]>(() =>
   props.platform ? (store.byPlatform[props.platform] ?? []) : Object.values(store.byPlatform).flat()
@@ -203,12 +213,25 @@ async function onFetchAll(): Promise<void> {
   }
   const platform = fetchPlatform.value
   if (!platform) return
+  // 2026-10-30：淘宝统一走已验证的页内全量分页通道（OrderFilter 按月接口只回空数组，旧通道废弃）；
+  // 强制全量时传 full=true，绕过页内脚本的 knownIds 增量早停
+  if (platform === 'taobao') {
+    ElMessage.info('淘宝全量抓取中，历史订单较多时需 1~2 分钟…')
+    const r = await window.api.taobaoFetchAll(props.webviewId, forceFull.value)
+    if (r.ok) {
+      await store.reloadCache()
+      store.markSynced('taobao')
+      ElMessage.success(`淘宝订单已加载，本地共 ${store.byPlatform['taobao']?.length ?? 0} 单`)
+      if (r.message) ElMessage.info(r.message)
+    } else if (r.message) {
+      ElMessage.warning(r.message)
+    }
+    return
+  }
   const options =
-    platform === 'taobao'
-      ? { months: 12 }
-      : platform === 'jd'
-        ? { range: 'current' as const }
-        : undefined
+    platform === 'jd'
+      ? { range: 'current' as const, full: forceFull.value }
+      : { full: forceFull.value }
   const result = await window.api.fetchAllOrders(platform, props.webviewId, options)
   if (!result.ok && !result.cancelled && result.message) ElMessage.warning(result.message)
 }

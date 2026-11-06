@@ -119,9 +119,10 @@ type ReflowApi = {
   importOrdersFile: (
     platform: string
   ) => Promise<{ ok: boolean; imported: number; skipped: number; message?: string }>
-  /** 淘宝全量抓取：在已登录的主 webview 里调 lib.mtop（魔猫同款做法） */
+  /** 淘宝全量抓取：在已登录的主 webview 里调 lib.mtop（魔猫同款做法）；full=true 绕过增量早停 */
   taobaoFetchAll: (
-    webviewId: number
+    webviewId: number,
+    full?: boolean
   ) => Promise<{ ok: boolean; imported: number; totalPage: number; message?: string }>
   onOrdersFetchEvent: (listener: (payload: OrdersFetchEvent) => void) => Unsubscribe
   /** 主进程落盘后通知渲染层重载本地缓存 */
