@@ -1,0 +1,56 @@
+{
+  "id": "1234567890123456789",
+  "extra": {
+    "bizType": 5000,
+    "currency": "CNY",
+    "currencySymbol": "￥",
+    "finish": true,
+    "tradeStatus": "TRADE_FINISHED",
+    "vertical": true
+  },
+  "orderInfo": {
+    "createDay": "2026-05-26",
+    "createTime": "2026-05-26 11:40:41",
+    "id": "1234567890123456788"
+  },
+  "payInfo": {
+    "actualFee": {
+      "prefix": "合计",
+      "value": "￥9.40"
+    },
+    "total": {
+      "prefix": "共",
+      "suffix": "件商品",
+      "value": "1"
+    }
+  },
+  "presentOrder": false,
+  "seller": {
+    "id": 10001,
+    "nick": "合成餐饮店",
+    "shopDisable": true,
+    "shopImg": "//img.alicdn.com/imgextra/i1/10001/synthetic-shop.jpg"
+  },
+  "statusInfo": {
+    "text": "交易成功",
+    "type": "t0"
+  },
+  "subOrders": [
+    {
+      "id": 1234567890123456787,
+      "itemInfo": {
+        "id": 10002,
+        "pic": "//img.alicdn.com/imgextra/i1/10001/synthetic-item.jpg",
+        "skuId": 0,
+        "skuText": "默认",
+        "title": "合成菜品A-默认"
+      },
+      "priceInfo": {
+        "original": "9.50",
+        "promotion": "9.50",
+        "realTotal": "9.50"
+      },
+      "quantity": "1"
+    }
+  ]
+}

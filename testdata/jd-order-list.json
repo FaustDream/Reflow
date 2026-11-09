@@ -1,0 +1,42 @@
+[
+  {
+    "orderId": 123456789012,
+    "dateSubmit": "2026-09-01 10:20:30",
+    "shopInfo": {
+      "shopName": "合成测试旗舰店",
+      "shopUrl": "//mall.jd.com/index-10001.html"
+    },
+    "itemPayInfo": { "fistPrice": "199.00", "paymentTypeName": "在线支付" },
+    "statusInfo": { "orderStateName": "等待收货" },
+    "consigneeInfo": {
+      "customerName": "合成收货人",
+      "address": "北京市朝阳区合成路1号",
+      "mobile": "13800000001"
+    },
+    "wareList": [
+      {
+        "name": "合成商品甲",
+        "imgPath": "//img14.360buyimg.com/n1/jfs/t1/synthetic-a.jpg",
+        "num": 1,
+        "wareUrl": "https://item.jd.com/100011.html"
+      },
+      {
+        "name": "合成商品乙（赠品）",
+        "imgPath": "//img14.360buyimg.com/n1/jfs/t1/synthetic-b.jpg",
+        "num": 2,
+        "wareUrl": "https://item.jd.com/100022.html"
+      }
+    ]
+  },
+  {
+    "orderId": 123456789013,
+    "dateSubmit": 1759300000000,
+    "shopInfo": {},
+    "itemPayInfo": { "fistPrice": "59.90" },
+    "statusInfo": { "orderStateName": "已完成" },
+    "consigneeInfo": {},
+    "wareList": [
+      { "name": "合成商品丙", "imgPath": "https://img.example.com/c.jpg", "num": 1 }
+    ]
+  }
+]

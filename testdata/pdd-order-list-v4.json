@@ -1,0 +1,94 @@
+{
+  "server_time": 1793005004,
+  "orders": [
+    {
+      "type": 1,
+      "group_id": "173279339531",
+      "order_sn": "261010-481055239712433",
+      "parent_order_sn": "",
+      "order_amount": 1580,
+      "shipping_amount": 0,
+      "discount_amount": 500,
+      "display_amount": 1580,
+      "status": 4,
+      "shipping_time": 1791611604,
+      "order_time": 1791603821,
+      "receive_time": 1791860814,
+      "tracking_number": "JT5534678129090",
+      "order_link_url": "order.html?order_sn=261010-481055239712433&page_from=1&main_orders=1",
+      "order_goods": [
+        {
+          "goods_id": "995765803267",
+          "sku_id": "1955557580052",
+          "goods_name": "合成普通订单商品 浴室拖鞋",
+          "goods_price": 2080,
+          "goods_number": 2,
+          "thumb_url": "https://img.pddpic.com/open-gw/synthetic-pdd.jpg",
+          "spec": "浅绿+灰色【防滑速干-2双装】"
+        }
+      ],
+      "group_order": { "group_status": 1, "create_at": 1791602057, "success_time": 1791603828 },
+      "mall": { "id": "900003", "mall_name": "合成普通店铺乙" },
+      "order_status_prompt": "已收货",
+      "sort_id": "17916020573963040742724330000"
+    },
+    {
+      "type": 2,
+      "order_sn": "PO-261023-224505382432433",
+      "parent_order_sn": "PO-261023-224505382432433",
+      "mall": {
+        "id": "900002",
+        "logo": "http://images.pinduoduo.com/synthetic-mall.png",
+        "special_logo": true,
+        "mall_name": "合成PDD店铺甲",
+        "tag_list": [],
+        "mall_url": "ywgnpxpt.html?_p_page=vgt_mall_list"
+      },
+      "group_order": {
+        "group_status": 1,
+        "customer_num": 2,
+        "expire_time": 1792845231,
+        "create_at": 1792758831,
+        "group_member_num": 1,
+        "success_time": 1792758831
+      },
+      "order_status_prompt": "待评价",
+      "orders": [
+        {
+          "order_goods": [
+            {
+              "goods_name": "合成PDD商品甲 2.5kg/袋",
+              "goods_price": 1699,
+              "goods_number": 1,
+              "thumb_url": "https://img.pddpic.com/synthetic-a.jpg",
+              "spec": ""
+            },
+            {
+              "goods_name": "合成PDD商品乙 500g/袋",
+              "goods_price": 598,
+              "goods_number": 2,
+              "thumb_url": "https://img.pddpic.com/synthetic-b.jpg",
+              "spec": "500g±50g/袋"
+            }
+          ],
+          "order_status_prompt": "",
+          "order_status_prompt_color": "#9c9c9c",
+          "goods_tags": [],
+          "order_tags": [],
+          "order_sn": "261023-396304074272433",
+          "can_share_order": false
+        }
+      ],
+      "price_desc_extra": { "goods_desc": "共3件商品" },
+      "display_amount": 2897,
+      "used_coupons": true,
+      "tabs_belong": ["all"],
+      "order_link_url": "ywgnpxpt.html?_t_timestamp=mobile-vegetables&_p_page=vgt_mall_list",
+      "offset": "MO-02-261023-396304074272433",
+      "sort_id": "17927588233963040742724330000",
+      "extra_info": {}
+    }
+  ],
+  "extra_info": { "lineation_ab_type": "2" },
+  "view_list": []
+}

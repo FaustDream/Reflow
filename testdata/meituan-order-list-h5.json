@@ -1,0 +1,58 @@
+{
+  "msg": "成功",
+  "code": 0,
+  "data": {
+    "productCode": 0,
+    "otherTypeOrderList": [],
+    "orderList": [
+      {
+        "orderId": "2600000000000000001",
+        "mtOrderViewId": "2600000000000000001",
+        "shopName": "合成药房（十六分店）",
+        "totalPrice": "70.44",
+        "orderTime": "2026-03-02 18:00",
+        "orderTimeSec": 1772445631,
+        "payStatus": 3,
+        "img": "http://p0.meituan.net/business/synthetic-a.png",
+        "orderStatusStr": "已完成",
+        "highlight": 0,
+        "useMTPay": true,
+        "payOrderId": 0,
+        "productList": [
+          { "productName": "合成药片 10mg*50片/盒", "productCount": 2, "spuId": 8309796754 }
+        ],
+        "mtWmPoiId": -100,
+        "shopId": 0,
+        "buttonList": [{ "title": "再来一单", "type": 1001, "isHighlight": 0 }],
+        "orderPlatform": 0,
+        "canDelete": 1,
+        "orderSource": 6,
+        "scheme": "https://h5.waimai.meituan.com/waimai/mindex/menu?mtShopId=-100",
+        "poi_id_str": "SYNTH_POI_0001"
+      },
+      {
+        "orderId": "2600000000000000002",
+        "shopName": "合成烤鸭店",
+        "totalPrice": "25.8",
+        "orderTime": "2025-12-13 11:06",
+        "orderTimeSec": 1765595188,
+        "orderStatusStr": "已完成",
+        "img": "//p0.meituan.net/business/synthetic-b.png",
+        "productList": [
+          { "productName": "合成烤鸭单人套餐", "productCount": 1, "spuId": 22928507018 },
+          { "productName": "合成可乐", "productCount": 1, "spuId": 22928507019 }
+        ],
+        "scheme": "https://h5.waimai.meituan.com/waimai/mindex/menu?mtShopId=-101",
+        "poi_id_str": "SYNTH_POI_0002"
+      }
+    ],
+    "amount": 10,
+    "nextStartIndex": 0,
+    "isEnd": false,
+    "cursor": "{\"apply_id\":0,\"order_time\":1763287986}",
+    "orderType": 1,
+    "type": 1,
+    "subtype": 0,
+    "message": "success"
+  }
+}

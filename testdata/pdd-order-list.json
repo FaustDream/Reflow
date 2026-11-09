@@ -1,0 +1,75 @@
+{
+  "success": true,
+  "result": {
+    "total_count": 2,
+    "has_more": false,
+    "order_list": [
+      {
+        "order_sn": "261001-086088167827991",
+        "order_status_text": "已发货",
+        "mall_name": "合成PDD旗舰店",
+        "mall_id": "900001",
+        "created_at": "2026-10-01 09:12:30",
+        "pay_amount": "129.90",
+        "pay_time": "2026-10-01 09:13:01",
+        "ship_time": "2026-10-02 18:00:00",
+        "receive_time": "",
+        "freight": "0.00",
+        "pay_method": "微信支付",
+        "remark": "尽快发货",
+        "express_company": "合成快递",
+        "tracking_no": "SF1234567890",
+        "tracking_status": "运输中",
+        "address": {
+          "receiver_name": "合成收货人",
+          "address": "上海市浦东新区合成大道100号",
+          "mobile": "13900000002"
+        },
+        "goods_list": [
+          {
+            "goods_id": "11001",
+            "goods_name": "合成PDD商品甲",
+            "goods_thumb_url": "https://t00img.yangkeduo.com/goods/images/synthetic-a.jpg",
+            "goods_price": "109.90",
+            "goods_count": 1,
+            "sku": "规格：蓝色",
+            "link": "https://mobile.yangkeduo.com/goods.html?goods_id=11001"
+          },
+          {
+            "goods_id": "11002",
+            "goods_name": "合成PDD商品乙",
+            "goods_thumb_url": "https://t00img.yangkeduo.com/goods/images/synthetic-b.jpg",
+            "goods_price": "10.00",
+            "goods_count": 2,
+            "sku": "规格：白色"
+          }
+        ]
+      },
+      {
+        "order_sn": "260920-086088167827992",
+        "order_status_text": "已完成",
+        "mall_name": "合成PDD专营店",
+        "mall_id": "900002",
+        "created_at": 1758350000000,
+        "total_amount": "59.00",
+        "pay_time": 1758350100000,
+        "confirm_time": 1758500000000,
+        "address": {
+          "receiver_name": "合成收货人乙",
+          "address": "广州市天河区合成街2号",
+          "mobile": "13700000003"
+        },
+        "goods_list": [
+          {
+            "goods_id": "11003",
+            "goods_name": "合成PDD商品丙",
+            "thumb_url": "https://t00img.yangkeduo.com/goods/images/synthetic-c.jpg",
+            "price": "59.00",
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  "error_code": 0
+}

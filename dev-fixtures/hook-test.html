@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>注入桥自测页</title>
+    <script src="/hook.js"></script>
+  </head>
+  <body>
+    <h1>注入桥自测页</h1>
+    <p>本页主动发起 XHR / fetch / JSONP 三种请求，用于验证 hook-source 的捕获能力。</p>
+    <pre id="out">等待捕获…</pre>
+    <script>
+      const NONCE = 'selftest-nonce-0001'
+      window.__captured = []
+
+      // 先挂回传监听，再装 Hook，最后发请求
+      window.addEventListener('message', (e) => {
+        if (e.data && e.data.__reflow === NONCE) {
+          window.__captured.push(e.data.payload)
+          document.getElementById('out').textContent =
+            '已捕获 ' + window.__captured.length + ' 条：\n' +
+            window.__captured.map((c) => c.kind + ' ' + (c.method || '') + ' ' + c.url).join('\n')
+        }
+      })
+
+      ReflowHook.installPageHooks(NONCE)
+
+      // 1) fetch
+      fetch('/api/orders.json').then((r) => r.json()).then((d) => { window.__fetchDone = d })
+      // 2) XHR
+      const xhr = new XMLHttpRequest()
+      xhr.open('GET', '/api/orders.json')
+      xhr.onload = () => { window.__xhrDone = xhr.status }
+      xhr.send()
+      // 3) JSONP
+      window.handleJsonp = (data) => { window.__jsonpDone = data }
+      const s = document.createElement('script')
+      s.src = '/jsonp.js?callback=handleJsonp'
+      document.body.appendChild(s)
+    </script>
+  </body>
+</html>

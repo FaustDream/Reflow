@@ -1,0 +1,36 @@
+{
+  "orderId": "123456789012",
+  "orderType": 1,
+  "dateSubmit": "2023-06-29 19:21:06",
+  "shipmentTypeName": "无需配送",
+  "itemPayInfo": {
+    "price": 0,
+    "totalPrice": 0,
+    "shouldPay": 0,
+    "showShouldPay": false,
+    "paymentType": 4,
+    "paymentTypeName": "在线支付",
+    "paymentAbnormal": false
+  },
+  "statusInfo": {
+    "orderState": 18
+  },
+  "shopInfo": {
+    "shopId": "0",
+    "shopName": "合成互联网医院"
+  },
+  "wareList": [
+    {
+      "name": "合成问诊服务",
+      "num": 1,
+      "productId": 10001,
+      "imgPath": "//img14.360buyimg.com/n1/jfs/t1/synthetic-v.jpg",
+      "wareUrl": "//item.jd.com/10001.html"
+    }
+  ],
+  "consigneeInfo": {
+    "customerName": "合成收货人",
+    "address": "北京市朝阳区合成路1号",
+    "mobile": "138****0000"
+  }
+}
