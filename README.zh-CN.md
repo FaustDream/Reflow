@@ -56,13 +56,13 @@ Reflow 用你平时也要扫的二维码登录，走网页版自己用的那套�
 
 ## 它是怎么跑的
 
-界面是普通的 Vue 3 网页跑在浏览器里，所有需要权限的活都在一个绑定 `127.0.0.1` 的隐藏 Electron 进程里做。
+界面是普通的 Vue 3 应用；所有需要权限的活由 Electron 主进程完成，两者通过环回地址上的 HTTP + SSE 桥通信。
 
 ```
-浏览器  http://localhost:5173    （Vue 3 + Element Plus + Pinia）
+渲染层  http://localhost:5173    （Vue 3 + Element Plus + Pinia）
    │   invoke → POST /api/invoke      推送 → GET /api/events（SSE）
    ▼
-Electron 主进程   http://127.0.0.1:9478   （无窗口、无托盘）
+Electron 主进程   http://127.0.0.1:9478
    ├── adapters/            各平台的请求与解析
    ├── 隐藏宿主页            跑平台自己的页面 SDK 来算 sign
    ├── 登录（扫码）          写进 persist: 分区的 Cookie

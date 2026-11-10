@@ -56,13 +56,13 @@ Reflow logs in with the QR code you already scan, reads your own orders through 
 
 ## How it works
 
-The UI is a normal Vue 3 app in your browser; all privileged work happens in a headless Electron process bound to `127.0.0.1`.
+The UI is a Vue 3 app; all privileged work runs in the Electron main process, which the renderer reaches over a loopback HTTP + SSE bridge.
 
 ```
-Browser  http://localhost:5173   (Vue 3 + Element Plus + Pinia)
+Renderer  http://localhost:5173   (Vue 3 + Element Plus + Pinia)
    │   invoke → POST /api/invoke      push → GET /api/events (SSE)
    ▼
-Electron main   http://127.0.0.1:9478   (no window, no tray)
+Electron main   http://127.0.0.1:9478
    ├── adapters/            per-platform request + parse
    ├── hidden host window/  runs the platform's own page SDK to sign requests
    ├── login (QR)           writes cookies into a persist: partition
