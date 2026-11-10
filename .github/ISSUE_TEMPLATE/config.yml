@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全漏洞（私密上报）
+    url: https://github.com/FaustDream/Reflow/security/advisories/new
+    about: 涉及登录态、MITM 证书、订单数据泄漏的问题请走私密渠道，不要开公开 Issue
+  - name: 使用与排障说明
+    url: https://github.com/FaustDream/Reflow#known-limitations
+    about: 提交问题前先看「已知限制」：平台风控、接口变更、只支持四个平台都是预期行为

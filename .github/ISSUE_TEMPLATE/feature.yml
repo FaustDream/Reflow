@@ -1,0 +1,54 @@
+name: 功能建议
+description: 希望 Reflow 多做什么，或做得不一样
+title: '[Feature] '
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        这个项目刻意保持小：四个平台、一个本地缓存、三个导出形态。
+        所以最有说服力的建议不是「加个功能」，而是「你现在卡在哪一步，怎么绕过去的」。
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 你现在是怎么绕过这个问题的
+      description: 手工抄到 Excel？换用别的工具？分两个平台各导一次再合并？写得越具体越好
+      placeholder: |
+        我现在是先从淘宝导一份 CSV，再从京东导一份，然后在 Excel 里手工对齐列名，
+        每次大约 20 分钟，而且退款状态要靠肉眼判断。
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你希望它变成什么样
+      description: 描述结果，不用描述实现
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 涉及哪个平台
+      options:
+        - 闲鱼
+        - 京东
+        - 淘宝
+        - 拼多多
+        - 跨平台 / 与平台无关
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: 范围确认
+      options:
+        - label: 这个需求不需要上传数据到任何服务器（本项目的核心约束是数据不出本机）
+          required: true
+        - label: 这个需求不依赖引入图表库或遥测 SDK
+          required: false
+        - label: 如果需要抓新平台，我知道这通常意味着要逆向接口，且随时可能失效
+          required: false

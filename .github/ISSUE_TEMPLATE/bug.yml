@@ -1,0 +1,116 @@
+name: Bug 报告
+description: 抓取、登录、导出或界面出问题
+title: '[Bug] '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        抓取类问题大多有同一个根因：**平台换了接口或签名**。下面几项填清楚，能省掉至少两轮来回。
+
+        如果你的问题涉及登录态泄漏、证书、订单数据外泄，请不要在这里发，走 [私密上报](https://github.com/FaustDream/Reflow/security/advisories/new)。
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 「工具 → 关于」里的版本号，或 `package.json` 的 `version`
+      placeholder: 0.3.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS（Apple Silicon）
+        - macOS（Intel）
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node 版本
+      description: 输出 `node -v` 的结果。低于 22 的问题一般直接归到这里
+      placeholder: v22.20.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 出问题的平台
+      options:
+        - 闲鱼
+        - 京东
+        - 淘宝
+        - 拼多多
+        - 与具体平台无关（安装、界面、导出）
+    validations:
+      required: true
+
+  - type: dropdown
+    id: channel
+    attributes:
+      label: 涉及的通道
+      description: 不确定就选「不确定」，日志里会写
+      options:
+        - 接口直连
+        - 隐藏宿主页（签名宿主）
+        - MITM 抓包
+        - 登录 / 扫码
+        - 导出
+        - 不确定
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 一步一步写，从「打开页面」开始
+      placeholder: |
+        1. npm run dev:web
+        2. 侧栏点「京东」
+        3. 点「抓取订单」
+        4. 进度条停在第 2 年，界面提示……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望 vs 实际
+      placeholder: |
+        期望：抓到 3 年共 N 单
+        实际：只抓到第 1 年的 20 单，之后没有进度
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志片段
+      description: |
+        位置：`%APPDATA%\Reflow\logs\app-YYYY-MM-DD.log`（macOS `~/Library/Application Support/Reflow/logs`，Linux `~/.config/Reflow/logs`）。
+        也可用「工具 → 运行日志 → 打开日志目录」。粘贴报错前后 20 行左右即可，**记得把订单号、昵称、地址打码**。
+      render: text
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我读过 README 的「已知限制」，确认不是已经说明的行为
+          required: true
+        - label: 我搜过现有 Issue，没有重复
+          required: true
+        - label: 上面的日志与截图已脱敏，不含我的账号、订单号、地址或 Cookie
+          required: true
