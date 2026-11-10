@@ -52,7 +52,7 @@ Reflow logs in with the QR code you already scan, reads your own orders through 
 | **淘宝** Taobao | Direct `mtop` API, signed locally; 外卖 orders topped up from `asyncBought.htm` | Native QR code |
 | **拼多多** Pinduoduo | Direct v4 API with real paging cursor, scroll fallback | QR code extracted from the login page |
 
-美团 / 得物 / 快手小店 / 1688 / 饿了么 adapters were removed once the platforms closed their web entry points; see `src/shared/platform-visibility.ts` for what is hidden versus deleted.
+美团 / 得物 / 快手小店 / 1688 / 饿了么 were dropped once the platforms closed their web entry points. Some adapters are only hidden, some are deleted — `src/shared/platform-visibility.ts` is the single place that says which.
 
 ## How it works
 
