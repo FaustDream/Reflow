@@ -1,55 +1,25 @@
-# ============================================================
-# Reflow 忽略清单
-# 原则：只挡「可再生 / 本机状态 / 含真实数据或密钥」的文件。
-#       src/、scripts/、dev-fixtures/、testdata/*.json、.github/
-#       以及所有 package / tsconfig / vite 配置一律入库。
-# ============================================================
-
-# ---------- 1. 依赖与构建产物 ----------
-# npm 依赖树及 TS/Vite 缓存：npm ci 可完整重建；tsconfig 的 tsBuildInfoFile 也落在 node_modules/.tmp/
+# 依赖与构建产物（electron-vite 只产出 out/）
 node_modules/
-
-# electron-vite build 产物：package.json 的 main 指向 ./out/main/index.js，
-# CI 每次重新构建，入库只会产生无意义 diff
 out/
-# 其它打包/发版输出目录（预防性；当前管线未产出）
-dist/
-build/
-release/
 
-# 增量编译缓存、测试覆盖率、工具缓存，全部可由本地命令重建
-*.tsbuildinfo
-coverage/
-.vite/
+# 工具缓存 / 覆盖率输出；*.tsbuildinfo、.vite 落在 node_modules/ 下，已由上级覆盖
 .cache/
-.eslintcache
+coverage/
 
-# unplugin 生成的类型声明（dts 路径见 electron.vite.config.ts）：随组件/自动导入增减而变，
-# dev/build 时自动重写；手写的 src/renderer/src/env.d.ts 不在其中，必须入库
+# unplugin 自动生成的声明（手写的 env.d.ts 必须入库）
 src/renderer/src/components.d.ts
 src/renderer/src/auto-imports.d.ts
 
-# ---------- 2. 日志与运行输出 ----------
-# 应用日志（logger.ts 写 userData/logs/）与脚本取证日志：含运行时状态，
-# dump-platform-api.cjs 的 dump 还可能记录真实响应体
+# 日志与自检脚本产物
 *.log
 logs/
-
-# 自检脚本产物：二维码截图 / 临时 xlsx / 解析快照 / 接口 dump（含订单与 Cookie），
-# 见 scripts/README.md；目录里的 nul 也是 "> nul" 误建的垃圾文件
 .scratch/
+AGENTS.md
 
-# ---------- 3. 本地环境与敏感配置 ----------
-# 本地环境变量（token / 口令 / 私有凭据）；公开的示例模板仍要入库
-.env
-.env.*
+# 本地环境与凭据
+.env*
 !.env.example
-# 本地覆盖配置（*.local、*.local.json 等），因人而异，不应跟随仓库
-*.local
-*.local.*
-
-# 私钥与证书：MITM 的 CA/叶子证书由主进程运行时按机器随机生成在 userData/mitm/
-# （src/main/mitm/cert-gen.ts），scripts/mitm-spike.mjs 只在 %TEMP% 生成；私钥入库即凭据泄漏
+*.local*
 *.pem
 *.key
 *.crt
@@ -57,34 +27,22 @@ logs/
 *.p12
 *.pfx
 
-# ---------- 4. 编辑器与系统临时文件 ----------
-# 本机 IDE 状态（.idea/workspace.xml、.vscode/settings.json 等），因人而异
+# 编辑器与系统临时文件
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
 desktop.ini
-# 编辑器交换文件、备份与通用临时文件
-*.swp
-*.swo
+*.sw[po]
 *~
 *.tmp
 *.bak
 *.orig
-# Windows 保留名：命令行误写 "> nul" 会真的生成名为 nul 的文件
-nul
 
-# ---------- 5. 本地数据与测试输出 ----------
-# 工单 002 红线：真实订单数据默认不入库（README.md 记载的 PII 事故）。
-# 采用白名单式规则：单测依赖 testdata/ 下 12 份脱敏 json（src/**/__tests__ 直接 readFileSync），
-# 因此只挡未脱敏快照与导出表格，不碰任何 .json fixture；确需入库的模板用 git add -f
+# 真实数据与导出表格；testdata/*.json 为脱敏 fixture，必须入库
 testdata/**/*.real.*
-*.xlsx
-*.xls
-# 测试运行器输出（报告 / 覆盖率明细）
-test-results/
-playwright-report/
+*.xls*
 
-# ---------- 6. 本地开发文档 ----------
-# 本地工单与逆向分析报告（含本机绝对路径、逆向 dump，最大一份 1.85 MB），非构建与运行必需
-/docs/
+# 本地工单与逆向分析文档
+/docs/*
+!/docs/screenshots/

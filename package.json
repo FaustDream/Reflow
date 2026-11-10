@@ -8,8 +8,19 @@
     "name": "FaustDream",
     "email": "FaustDream@users.noreply.github.com"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FaustDream/Reflow.git"
+  },
+  "homepage": "https://github.com/FaustDream/Reflow#readme",
+  "bugs": {
+    "url": "https://github.com/FaustDream/Reflow/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev:web": "electron-vite dev -- --web",
     "dev:web:sw": "electron-vite dev -- --web --no-sandbox --disable-gpu --disable-gpu-sandbox --use-gl=swiftshader --use-angle=swiftshader",
