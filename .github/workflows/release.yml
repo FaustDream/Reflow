@@ -124,12 +124,18 @@ jobs:
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      - name: 创建 Release
+      - name: 创建或更新 Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$GITHUB_REF_NAME" artifacts/* \
-            --title "Reflow $GITHUB_REF_NAME" \
-            --notes-file release-notes.md \
-            --verify-tag
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release 已存在，覆盖说明与资产"
+            gh release edit "$GITHUB_REF_NAME" --notes-file release-notes.md
+            gh release upload "$GITHUB_REF_NAME" artifacts/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" artifacts/* \
+              --title "Reflow $GITHUB_REF_NAME" \
+              --notes-file release-notes.md \
+              --verify-tag
+          fi
           gh release view "$GITHUB_REF_NAME" --json url -q .url
