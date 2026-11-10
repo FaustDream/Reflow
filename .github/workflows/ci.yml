@@ -43,3 +43,17 @@ jobs:
 
       - name: 构建主进程 / preload / 渲染层
         run: npx electron-vite build
+
+      # .gitignore 挡得住手滑，挡不住 `git add -f`。本地工单与逆向分析报告在 docs/ 下，
+      # 只放行 README 截图；testdata 只允许脱敏夹具。
+      - name: 敏感目录兜底
+        run: |
+          leaked=$(git ls-files \
+            | grep -E '^(docs/|\.scratch/|testdata/.*\.real\.)' \
+            | grep -vE '^docs/screenshots/[^/]+\.png$' || true)
+          if [ -n "$leaked" ]; then
+            echo "::error::以下文件不该入库（本地工单 / 未脱敏数据 / 临时产物）："
+            echo "$leaked"
+            exit 1
+          fi
+          echo "检查通过：没有本地文档、临时产物或未脱敏夹具入库"
