@@ -13,7 +13,7 @@
 
 <sub>[English](README.md) · 简体中文</sub>
 
-<img src="docs/screenshots/01-overview.png" width="880" alt="Reflow 数据总览：KPI、年度支出、平台占比、退款率与每日热力图">
+<img src="assets/screenshots/01-overview.png" width="880" alt="Reflow 数据总览：KPI、年度支出、平台占比、退款率与每日热力图">
 
 </div>
 
@@ -40,7 +40,7 @@ Reflow 用你平时也要扫的二维码登录，走网页版自己用的那套�
 | **自带演示模式** | `npm run dev:web:demo` 用合成订单启动，不需要任何账号 |
 
 <div align="center">
-<img src="docs/screenshots/02-orders.png" width="880" alt="平台订单表：筛选行、勾选工具条与「网购 / 外卖」页签">
+<img src="assets/screenshots/02-orders.png" width="880" alt="平台订单表：筛选行、勾选工具条与「网购 / 外卖」页签">
 </div>
 
 ## 支持的平台
@@ -132,7 +132,7 @@ npm run build       # 先 typecheck，再 electron-vite build → out/
 - **界面只有中文。** 还没有 i18n 层。
 
 <div align="center">
-<img src="docs/screenshots/03-export.png" width="880" alt="导出对话框：Sheet 结构、列选择、可选商品缩略图">
+<img src="assets/screenshots/03-export.png" width="880" alt="导出对话框：Sheet 结构、列选择、可选商品缩略图">
 </div>
 
 ## 参与贡献

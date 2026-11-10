@@ -13,7 +13,7 @@ Local-first order aggregation for Chinese e-commerce accounts. Runs on your mach
 
 <sub>English · [简体中文](README.zh-CN.md)</sub>
 
-<img src="docs/screenshots/01-overview.png" width="880" alt="Reflow overview dashboard: KPIs, yearly spend, platform share, refund rate and a daily heat calendar">
+<img src="assets/screenshots/01-overview.png" width="880" alt="Reflow overview dashboard: KPIs, yearly spend, platform share, refund rate and a daily heat calendar">
 
 </div>
 
@@ -40,7 +40,7 @@ Reflow logs in with the QR code you already scan, reads your own orders through 
 | **Bundled demo mode** | `npm run dev:web:demo` starts with synthetic orders — no account needed |
 
 <div align="center">
-<img src="docs/screenshots/02-orders.png" width="880" alt="Per-platform order table with filter row, selection toolbar and 网购/外卖 tabs">
+<img src="assets/screenshots/02-orders.png" width="880" alt="Per-platform order table with filter row, selection toolbar and 网购/外卖 tabs">
 </div>
 
 ## Supported platforms
@@ -132,7 +132,7 @@ npm run build       # typecheck, then electron-vite build → out/
 - **UI is Chinese-only.** No i18n layer yet.
 
 <div align="center">
-<img src="docs/screenshots/03-export.png" width="880" alt="Export dialog: sheet layout, column selection, optional product thumbnails">
+<img src="assets/screenshots/03-export.png" width="880" alt="Export dialog: sheet layout, column selection, optional product thumbnails">
 </div>
 
 ## Contributing

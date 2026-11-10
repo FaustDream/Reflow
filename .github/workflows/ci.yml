@@ -44,12 +44,10 @@ jobs:
         run: npx electron-vite build
 
       # .gitignore 挡得住手滑，挡不住 `git add -f`。本地工单与逆向分析报告在 docs/ 下，
-      # 只放行 README 截图；testdata 只允许脱敏夹具。
+      # 整个目录一张都不许入库；testdata 只允许脱敏夹具。
       - name: 敏感目录兜底
         run: |
-          leaked=$(git ls-files \
-            | grep -E '^(docs/|\.scratch/|testdata/.*\.real\.)' \
-            | grep -vE '^docs/screenshots/[^/]+\.png$' || true)
+          leaked=$(git ls-files | grep -E '^(docs/|\.scratch/|testdata/.*\.real\.)' || true)
           if [ -n "$leaked" ]; then
             echo "::error::以下文件不该入库（本地工单 / 未脱敏数据 / 临时产物）："
             echo "$leaked"

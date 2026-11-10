@@ -43,6 +43,5 @@ desktop.ini
 testdata/**/*.real.*
 *.xls*
 
-# 本地工单与逆向分析文档
-/docs/*
-!/docs/screenshots/
+# 本地工单与逆向分析文档：整目录不入库（README 截图已移至 assets/screenshots/）
+/docs/
