@@ -1,5 +1,4 @@
 # 持续检查：类型 + 单测 + 构建管线（2026-11-08 起）。
-# 旧 build.yml 的三平台桌面打包流水线已随桌面版下线一并移除。
 #
 # electron-vite build 产出 out/（主进程 / preload / renderer 三个 bundle），
 # 是主进程与渲染层能否完整编译的门禁；网页版开发时 out/ 由 dev server 现编。
