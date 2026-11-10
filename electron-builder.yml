@@ -15,6 +15,14 @@ copyright: Copyright © 2026 Reflow
 # 发布动作交给 .github/workflows/release.yml（gh release create）。
 publish: null
 
+# 安装包体积：Electron 主程序本身就有 235MB，可压缩的只有外围。
+#   - 界面只有中文，语言包只留中英（55 个语言包 49MB → 1.2MB）
+#   - LZMA 吃满，换取安装包再小几 MB（构建时间略增）
+compression: maximum
+electronLanguages:
+  - zh-CN
+  - en-US
+
 directories:
   buildResources: build
   output: dist-release
@@ -26,6 +34,8 @@ files:
   - out/**/*
   - package.json
   - '!**/*.map'
+  # exceljs 的 dist/ 是浏览器 bundle（6.1MB），Node 入口走 excel.js → lib/，运行时不加载。
+  - '!node_modules/exceljs/dist/**'
 
 # 不要排除 node_modules 下的 doc/ 目录：exceljs 的模块就叫
 # node_modules/exceljs/lib/doc/workbook.js，一条 `**/doc/**` 会把主进程 require 打断。
