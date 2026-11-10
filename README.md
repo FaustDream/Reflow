@@ -112,9 +112,7 @@ npm test            # vitest, ~370 cases
 npm run build       # typecheck, then electron-vite build → out/
 ```
 
-`npm run build` produces the three bundles in `out/`; it does **not** produce an installer. Desktop packaging was retired in favour of the browser UI, so there is nothing to download and click — running from source is the supported path today.
-
-> Releases contains `v0.2.0`, the last packaged desktop build. It is a different, older product shape and is not maintained. Use the source.
+`npm run build` produces the three bundles in `out/`: main, preload and renderer.
 
 ## Data & privacy
 
@@ -132,7 +130,6 @@ npm run build       # typecheck, then electron-vite build → out/
 - **The MITM channel is Windows-only**, requires installing a root certificate, is off by default, and whitelists six domains. It exists as a fallback, not the main path.
 - **Order cache is not encrypted.** Anyone with access to your OS user profile can read it — use full-disk encryption if that matters.
 - **UI is Chinese-only.** No i18n layer yet.
-- **No installer.** Source run only; see above.
 
 <div align="center">
 <img src="docs/screenshots/03-export.png" width="880" alt="Export dialog: sheet layout, column selection, optional product thumbnails">

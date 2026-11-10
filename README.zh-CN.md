@@ -112,9 +112,7 @@ npm test            # vitest，约 370 个用例
 npm run build       # 先 typecheck，再 electron-vite build → out/
 ```
 
-`npm run build` 只产出 `out/` 里的三个 bundle，**不产出安装包**。桌面打包链路已下线、以浏览器界面为准，所以现在没有「下载即用」的产物，从源码运行是唯一受支持的路径。
-
-> Releases 里的 `v0.2.0` 是最后一个桌面打包版，形态与现在不同且已停止维护，请以源码为准。
+`npm run build` 产出 `out/` 下的三个 bundle：主进程、preload、渲染层。
 
 ## 数据与隐私
 
@@ -132,7 +130,6 @@ npm run build       # 先 typecheck，再 electron-vite build → out/
 - **MITM 通道仅 Windows**，需要安装根证书，默认关闭，白名单只有六个域名。它是兜底手段，不是主路径。
 - **订单缓存不加密。** 能进你系统账户的人就能读它，介意的话请开启全盘加密。
 - **界面只有中文。** 还没有 i18n 层。
-- **没有安装包。** 只能从源码跑，原因见上。
 
 <div align="center">
 <img src="docs/screenshots/03-export.png" width="880" alt="导出对话框：Sheet 结构、列选择、可选商品缩略图">
