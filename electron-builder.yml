@@ -1,0 +1,104 @@
+# electron-builder 打包配置（Windows / macOS / Linux）
+#
+# 产物落在 dist-release/（已 gitignore）。本地执行：
+#   npm run build:win     → Windows 安装包 + 免安装版
+#   npm run build:mac     → macOS dmg + zip（必须在 macOS 上执行）
+#   npm run build:linux   → Linux AppImage + deb（必须在 Linux 上执行）
+#
+# 前置条件：先 `electron-vite build` 产出 out/（renderer 不在 out/ 就是白屏）。
+# 日常开发用 `npm run dev:web`，那条路径不经过本文件。
+appId: com.reflow.app
+productName: Reflow
+copyright: Copyright © 2026 Reflow
+
+# 不做在线更新：不生成 app-update.yml / latest.yml，避免产物被当成自动更新源。
+# 发布动作交给 .github/workflows/release.yml（gh release create）。
+publish: null
+
+directories:
+  buildResources: build
+  output: dist-release
+
+# 只打运行期真正需要的东西：构建产物 + package.json（electron 入口与版本号）。
+# 源码、testdata、docs、scripts 不进包 —— 避免 PII 与体积膨胀。
+# 生产依赖由 electron-builder 按 package.json 的 dependencies 自动收集。
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+
+# 不要排除 node_modules 下的 doc/ 目录：exceljs 的模块就叫
+# node_modules/exceljs/lib/doc/workbook.js，一条 `**/doc/**` 会把主进程 require 打断。
+
+# @jsquash 的 wasm 与 ESM 入口靠 fs / 动态 import 读，解包到 asar 外最稳。
+asarUnpack:
+  - node_modules/@jsquash/**
+
+# macOS 无开发者证书时，打完包做一次 ad-hoc 签名：
+# arm64 上完全没签名的 .app 会被判「已损坏」，ad-hoc 即可启动。
+afterPack: scripts/mac-adhoc-sign.cjs
+
+# ---------------------------------------------------------------- Windows
+# 产物名用纯 ASCII：GitHub Release 会剥掉非 ASCII 前缀，本地名与线上资产名必须一致。
+win:
+  icon: build/icons/reflow.ico
+  requestedExecutionLevel: asInvoker
+  artifactName: Reflow-${version}-win-${arch}.${ext}
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Reflow
+  # 卸载保留订单缓存与登录态：用户数据不该被安装器删掉
+  deleteAppDataOnUninstall: false
+
+portable:
+  artifactName: Reflow-${version}-portable.${ext}
+
+# ---------------------------------------------------------------- macOS
+mac:
+  icon: build/icons/icon-1024.png
+  category: public.app-category.productivity
+  # 未签名、未公证：首次打开需右键「打开」，或
+  #   xattr -dr com.apple.quarantine "/Applications/Reflow.app"
+  identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  artifactName: Reflow-${version}-mac-${arch}.${ext}
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+
+dmg:
+  artifactName: Reflow-${version}-mac-${arch}.${ext}
+
+# ---------------------------------------------------------------- Linux
+linux:
+  icon: build/icons
+  category: Office
+  executableName: reflow
+  synopsis: 多平台订单聚合与导出
+  description: 把散落在淘宝、京东、拼多多、闲鱼等平台的订单归集到本机，统一查看与导出。
+  maintainer: FaustDream <FaustDream@users.noreply.github.com>
+  artifactName: Reflow-${version}-linux-${arch}.${ext}
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  desktop:
+    entry:
+      Name: Reflow
+      Comment: 多平台订单聚合与导出
+      Categories: Office;Utility;

@@ -6,16 +6,33 @@
 
 Local-first order aggregation for Chinese e-commerce accounts. Runs on your machine, stores on your machine, uploads nothing.
 
+[![Release](https://img.shields.io/github/v/release/FaustDream/Reflow)](https://github.com/FaustDream/Reflow/releases/latest)
 [![CI](https://github.com/FaustDream/Reflow/actions/workflows/ci.yml/badge.svg)](https://github.com/FaustDream/Reflow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#requirements)
-[![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen.svg)](#requirements)
+[![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen.svg)](#run-from-source)
 
 <sub>English · [简体中文](README.zh-CN.md)</sub>
 
 <img src="assets/screenshots/01-overview.png" width="880" alt="Reflow overview dashboard: KPIs, yearly spend, platform share, refund rate and a daily heat calendar">
 
 </div>
+
+## Install
+
+Grab the package for your system from [Releases](https://github.com/FaustDream/Reflow/releases/latest):
+
+| System | Download |
+|---|---|
+| Windows 10/11 | `Reflow-1.0.0-win-x64.exe` (installer) or `Reflow-1.0.0-portable.exe` (no install) |
+| macOS | `Reflow-1.0.0-mac-arm64.dmg` (Apple Silicon) or `Reflow-1.0.0-mac-x64.dmg` (Intel) |
+| Linux | `Reflow-1.0.0-linux-*.AppImage` (universal) or `*.deb` (Debian / Ubuntu) |
+
+The builds are **unsigned**, so the OS will block the first launch. That is expected:
+
+- **Windows**: SmartScreen says "Windows protected your PC" → *More info* → *Run anyway*.
+- **macOS**: right-click the app and choose *Open*, or `xattr -dr com.apple.quarantine "/Applications/Reflow.app"`.
+
+Verify integrity against `SHA256SUMS.txt` in the same release (`certutil -hashfile <file> SHA256` on Windows).
 
 ## Why
 
@@ -37,7 +54,7 @@ Reflow logs in with the QR code you already scan, reads your own orders through 
 | **Dashboard** | 5 KPIs + yearly spend, platform share, monthly distribution, refund gauge, daily heat calendar, weekday and status breakdowns — hand-written SVG, no chart library |
 | **Trends & comparison** | Time-dimension view and platform-dimension view over the same dataset |
 | **Filter and export** | Filter by year, status, keyword; select rows; export in three shapes with per-platform sheets |
-| **Bundled demo mode** | `npm run dev:web:demo` starts with synthetic orders — no account needed |
+| **Run log** | Live log view inside the app: level filter, keyword search, open log folder |
 
 <div align="center">
 <img src="assets/screenshots/02-orders.png" width="880" alt="Per-platform order table with filter row, selection toolbar and 网购/外卖 tabs">
@@ -56,13 +73,14 @@ Reflow logs in with the QR code you already scan, reads your own orders through 
 
 ## How it works
 
-The UI is a Vue 3 app; all privileged work runs in the Electron main process, which the renderer reaches over a loopback HTTP + SSE bridge.
+The UI is a Vue 3 app; all privileged work runs in the Electron main process. In a packaged build the two talk over the preload bridge; during source development the UI can also run in a browser and speak loopback HTTP + SSE instead.
 
 ```
-Renderer  http://localhost:5173   (Vue 3 + Element Plus + Pinia)
-   │   invoke → POST /api/invoke      push → GET /api/events (SSE)
+Renderer  Vue 3 + Element Plus + Pinia
+   │   packaged: window.api injected by preload
+   │   dev:      POST /api/invoke, GET /api/events (SSE)
    ▼
-Electron main   http://127.0.0.1:9478
+Electron main   (dev mode also opens a web-bridge at http://127.0.0.1:9478)
    ├── adapters/            per-platform request + parse
    ├── hidden host window/  runs the platform's own page SDK to sign requests
    ├── login (QR)           writes cookies into a persist: partition
@@ -71,60 +89,50 @@ Electron main   http://127.0.0.1:9478
    └── MITM (optional)      Windows only, off by default
 ```
 
-Nothing binds to `0.0.0.0`, and the bridge has no auth outside loopback — do not expose port 9478.
+The bridge binds to loopback only and has no auth beyond it — do not expose port 9478.
 
-## Requirements
+## Run from source
 
-- Node.js **22 or newer** (CI runs on 22)
-- Windows 10/11, macOS 12+, or a Linux desktop
-- An account on at least one supported platform, plus a phone to scan the login QR code
-
-## Quick start
+Node.js 22 or newer.
 
 ```bash
 git clone https://github.com/FaustDream/Reflow.git
 cd Reflow
 npm ci
-npm run dev:web
+npm run dev:web          # then open http://localhost:5173
 ```
 
-Then open <http://localhost:5173>. The Electron process starts with the dev server; closing the terminal stops both.
+The Electron process starts with the dev server; closing the terminal stops both. On machines with broken GPU drivers (VMs, RDP), an Electron instance started without software rendering can exit silently after ~40 seconds — use `npm run dev:web:sw` instead.
 
-On machines with broken GPU drivers (VMs, RDP), an Electron instance started without software rendering can exit silently after ~40 seconds. Use the pinned variant:
-
-```bash
-npm run dev:web:sw   # --no-sandbox --disable-gpu --use-gl=swiftshader
-```
-
-### Try it without an account
+Try it without an account:
 
 ```bash
 npm run dev:web:demo
 ```
 
-This prepares an isolated `userData` directory (`%TEMP%/reflow-demo`, never your real one), fills it with synthetic orders, and prints four platforms' worth of data — enough to exercise filters, the dashboard and the export dialog.
+This prepares an isolated `userData` directory (`%TEMP%/reflow-demo`, never your real one), fills it with synthetic orders, and gives you four platforms' worth of data — enough to exercise filters, the dashboard and the export dialog.
 
-## Build from source
+### Build installers yourself
 
 ```bash
-npm run typecheck   # node + preload + web
-npm test            # vitest, ~370 cases
-npm run build       # typecheck, then electron-vite build → out/
+npm run build:win      # Windows installer + portable
+npm run build:mac      # macOS dmg + zip (must run on macOS)
+npm run build:linux    # Linux AppImage + deb (must run on Linux)
 ```
 
-`npm run build` produces the three bundles in `out/`: main, preload and renderer.
+Artifacts land in `dist-release/`. macOS builds get an ad-hoc signature so they actually launch on Apple Silicon.
 
 ## Data & privacy
 
-- Orders are cached as **plain JSON**, one file per platform: `%APPDATA%\Reflow\orders\<platform>.json` (macOS: `~/Library/Application Support/Reflow`, Linux: `~/.config/Reflow`). Atomic write (`tmp` → rename), field whitelist, **no cookies or tokens inside**.
+- Orders are cached as **plain JSON**, one file per platform: `%APPDATA%\Reflow\orders\<platform>.json` (macOS: `~/Library/Application Support/Reflow`, Linux: `~/.config/Reflow`). Atomic write, field whitelist, **no cookies or tokens inside**.
 - Login state lives in Electron's `persist:platform-<id>` partitions, i.e. where Chrome would keep it. Reflow never copies it into the cache or the export.
 - The only outbound requests are: the platform's own order endpoints, the platform's login endpoint, and product-image CDNs when you export with thumbnails. There is no telemetry, no analytics, no auto-updater, no cloud sync, no remote config.
 - Logs go to `userData/logs/app-YYYY-MM-DD.log` (NDJSON, 7 days, cookie/token values masked).
-- The export dialog writes wherever you point it, and records the path in a local export history you can clear.
+- The installer and a source run share the same `userData` directory: upgrading in place keeps your cache, uninstalling leaves it alone.
 
 ## Known limitations
 
-- **Four platforms only.** Meituan and the standalone food-delivery tabs are gone; Taobao/JD orders still expose a 网购/外卖 split inside the platform page.
+- **Four platforms only.** Food delivery is no longer a separate platform; Taobao/JD orders still expose a 网购/外卖 split inside the platform page.
 - **Platform risk control is outside our control.** A slider or captcha ends the automated path — Reflow tells you to open the page and finish it by hand.
 - **APIs are undocumented and change without notice.** A platform shipping a new sign or endpoint breaks capture until the adapter is updated. No SLA.
 - **The MITM channel is Windows-only**, requires installing a root certificate, is off by default, and whitelists six domains. It exists as a fallback, not the main path.
@@ -137,9 +145,7 @@ npm run build       # typecheck, then electron-vite build → out/
 
 ## Contributing
 
-Bug reports, adapter fixes and UI work are welcome — start with [CONTRIBUTING.md](CONTRIBUTING.md) (how to run, how to test, what a PR needs) and read the opening checklist before filing an issue: it asks for the log path and your Node version because that is what actually shortens the thread.
-
-Security issues: please use the private channel described in [SECURITY.md](SECURITY.md), not a public issue.
+Bug reports, adapter fixes and UI work are welcome — start with [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: please use the private channel described in [SECURITY.md](SECURITY.md), not a public issue.
 
 ## Disclaimer
 
@@ -147,4 +153,4 @@ Unofficial tooling, not affiliated with or endorsed by any platform. It reads **
 
 ## License
 
-[MIT](LICENSE) © 2026 FaustDream. Same licence as most order-export tools in this space; do whatever you want with it, including commercial use, as long as the copyright notice stays.
+[MIT](LICENSE) © 2026 FaustDream. Use it, ship it, sell it — just keep the copyright notice.

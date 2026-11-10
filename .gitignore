@@ -1,6 +1,7 @@
-# 依赖与构建产物（electron-vite 只产出 out/）
+# 依赖与构建产物（electron-vite 只产出 out/，electron-builder 落到 dist-*/）
 node_modules/
 out/
+dist-*/
 
 # 工具缓存 / 覆盖率输出；*.tsbuildinfo、.vite 落在 node_modules/ 下，已由上级覆盖
 .cache/
@@ -15,6 +16,7 @@ src/renderer/src/auto-imports.d.ts
 logs/
 .scratch/
 AGENTS.md
+.workbuddy/
 
 # 本地环境与凭据
 .env*

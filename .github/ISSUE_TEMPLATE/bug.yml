@@ -14,8 +14,8 @@ body:
     id: version
     attributes:
       label: 版本
-      description: 「工具 → 关于」里的版本号，或 `package.json` 的 `version`
-      placeholder: 0.3.0
+      description: 「工具 → 关于」里的版本号，或安装包文件名里的版本
+      placeholder: 1.0.0
     validations:
       required: true
 
@@ -35,11 +35,11 @@ body:
   - type: input
     id: node
     attributes:
-      label: Node 版本
-      description: 输出 `node -v` 的结果。低于 22 的问题一般直接归到这里
+      label: Node 版本（可选）
+      description: 只有从源码运行才需要，填 `node -v` 的结果
       placeholder: v22.20.0
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: platform
@@ -73,12 +73,11 @@ body:
     id: steps
     attributes:
       label: 复现步骤
-      description: 一步一步写，从「打开页面」开始
+      description: 一步一步写，从「启动应用」开始
       placeholder: |
-        1. npm run dev:web
-        2. 侧栏点「京东」
-        3. 点「抓取订单」
-        4. 进度条停在第 2 年，界面提示……
+        1. 打开 Reflow，侧栏点「京东」
+        2. 点「抓取订单」
+        3. 进度条停在第 2 年，界面提示……
     validations:
       required: true
 

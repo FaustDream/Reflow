@@ -6,16 +6,33 @@
 
 本地优先的电商订单归集工具：在你自己的机器上运行，数据也留在你自己的机器上，不上传任何内容。
 
+[![Release](https://img.shields.io/github/v/release/FaustDream/Reflow)](https://github.com/FaustDream/Reflow/releases/latest)
 [![CI](https://github.com/FaustDream/Reflow/actions/workflows/ci.yml/badge.svg)](https://github.com/FaustDream/Reflow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#环境要求)
-[![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen.svg)](#环境要求)
+[![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen.svg)](#从源码运行)
 
 <sub>[English](README.md) · 简体中文</sub>
 
 <img src="assets/screenshots/01-overview.png" width="880" alt="Reflow 数据总览：KPI、年度支出、平台占比、退款率与每日热力图">
 
 </div>
+
+## 下载安装
+
+到 [Releases](https://github.com/FaustDream/Reflow/releases/latest) 取对应系统的包：
+
+| 系统 | 下载 |
+|---|---|
+| Windows 10/11 | `Reflow-1.0.0-win-x64.exe`（安装包）或 `Reflow-1.0.0-portable.exe`（免安装） |
+| macOS | `Reflow-1.0.0-mac-arm64.dmg`（Apple Silicon）或 `Reflow-1.0.0-mac-x64.dmg`（Intel） |
+| Linux | `Reflow-1.0.0-linux-*.AppImage`（通用）或 `*.deb`（Debian / Ubuntu） |
+
+安装包**未做代码签名**，首次运行会被系统拦一次，这是预期行为：
+
+- **Windows**：SmartScreen 提示「Windows 已保护你的电脑」→「更多信息」→「仍要运行」。
+- **macOS**：右键点图标选「打开」；或 `xattr -dr com.apple.quarantine "/Applications/Reflow.app"`。
+
+完整性校验：同一 Release 里附有 `SHA256SUMS.txt`，Windows 用 `certutil -hashfile <文件> SHA256` 比对即可。
 
 ## 为什么需要它
 
@@ -37,7 +54,7 @@ Reflow 用你平时也要扫的二维码登录，走网页版自己用的那套�
 | **数据总览** | 5 个 KPI + 年度分布、平台占比、月度分布、退款仪表、每日热力、周内分布、状态分布；图表全部手写 SVG，不引图表库 |
 | **趋势分析 / 平台对比** | 同一份数据的两个视角：按时间看走势，按平台看结构 |
 | **筛选与导出** | 年份 / 状态 / 关键词筛选，可勾选，导出三种形态，支持按平台分 Sheet |
-| **自带演示模式** | `npm run dev:web:demo` 用合成订单启动，不需要任何账号 |
+| **运行日志** | 界面内实时看日志，可过滤级别、搜关键词、打开日志目录 |
 
 <div align="center">
 <img src="assets/screenshots/02-orders.png" width="880" alt="平台订单表：筛选行、勾选工具条与「网购 / 外卖」页签">
@@ -56,13 +73,14 @@ Reflow 用你平时也要扫的二维码登录，走网页版自己用的那套�
 
 ## 它是怎么跑的
 
-界面是普通的 Vue 3 应用；所有需要权限的活由 Electron 主进程完成，两者通过环回地址上的 HTTP + SSE 桥通信。
+界面是普通的 Vue 3 应用；所有需要权限的活由 Electron 主进程完成。安装包里两者通过 preload 桥通信，源码开发时也可让界面跑在浏览器里、改走环回 HTTP + SSE。
 
 ```
-渲染层  http://localhost:5173    （Vue 3 + Element Plus + Pinia）
-   │   invoke → POST /api/invoke      推送 → GET /api/events（SSE）
+渲染层  Vue 3 + Element Plus + Pinia
+   │   安装包：preload 注入 window.api
+   │   开发时：POST /api/invoke、GET /api/events（SSE）
    ▼
-Electron 主进程   http://127.0.0.1:9478
+Electron 主进程   （开发模式下另开 http://127.0.0.1:9478 的 web-bridge）
    ├── adapters/            各平台的请求与解析
    ├── 隐藏宿主页            跑平台自己的页面 SDK 来算 sign
    ├── 登录（扫码）          写进 persist: 分区的 Cookie
@@ -71,32 +89,22 @@ Electron 主进程   http://127.0.0.1:9478
    └── MITM（可选）          仅 Windows，默认关闭
 ```
 
-进程不监听 `0.0.0.0`，桥也没有环回以外的鉴权 —— 不要把 9478 端口暴露出去。
+web-bridge 只监听环回地址、环回以外没有鉴权 —— 不要把 9478 端口暴露出去。
 
-## 环境要求
+## 从源码运行
 
-- Node.js **22 或更高**（CI 使用 22）
-- Windows 10/11、macOS 12+ 或带桌面环境的 Linux
-- 至少一个受支持平台的账号，以及一部能扫码的手机
-
-## 快速开始
+需要 Node.js 22 或更高。
 
 ```bash
 git clone https://github.com/FaustDream/Reflow.git
 cd Reflow
 npm ci
-npm run dev:web
+npm run dev:web          # 浏览器打开 http://localhost:5173
 ```
 
-然后打开 <http://localhost:5173>。Electron 进程随 dev server 一起启动，关掉终端即全部结束。
+Electron 主进程随 dev server 一起启动，关掉终端即全部结束。在 GPU 驱动异常的机器上（虚拟机、远程桌面），Electron 可能启动约 40 秒后静默退出，改用 `npm run dev:web:sw`（固定软件渲染参数）。
 
-在 GPU 驱动异常的机器上（虚拟机、远程桌面），不带软件渲染参数的 Electron 实例可能在启动约 40 秒后静默退出。改用固定了参数的版本：
-
-```bash
-npm run dev:web:sw   # --no-sandbox --disable-gpu --use-gl=swiftshader
-```
-
-### 没有账号也能看
+没有平台账号也能看界面：
 
 ```bash
 npm run dev:web:demo
@@ -104,27 +112,27 @@ npm run dev:web:demo
 
 它会准备一个隔离的 `userData` 目录（`%TEMP%/reflow-demo`，绝不碰你的真实目录），写进四个平台的合成订单，足够把筛选、总览和导出对话框都点一遍。
 
-## 从源码构建
+### 自己打包
 
 ```bash
-npm run typecheck   # node + preload + web 三个工程
-npm test            # vitest，约 370 个用例
-npm run build       # 先 typecheck，再 electron-vite build → out/
+npm run build:win      # Windows 安装包 + 免安装版
+npm run build:mac      # macOS dmg + zip（须在 macOS 上执行）
+npm run build:linux    # Linux AppImage + deb（须在 Linux 上执行）
 ```
 
-`npm run build` 产出 `out/` 下的三个 bundle：主进程、preload、渲染层。
+产物落在 `dist-release/`。macOS 的包会用 ad-hoc 签名兜底，保证 Apple Silicon 上能启动。
 
 ## 数据与隐私
 
-- 订单以**明文 JSON** 缓存在 `%APPDATA%\Reflow\orders\<platform>.json`（macOS：`~/Library/Application Support/Reflow`，Linux：`~/.config/Reflow`）。原子写入（`tmp` → rename）、字段白名单，**不含 Cookie 或令牌**。
+- 订单以**明文 JSON** 缓存在 `%APPDATA%\Reflow\orders\<platform>.json`（macOS：`~/Library/Application Support/Reflow`，Linux：`~/.config/Reflow`）。原子写入、字段白名单，**不含 Cookie 或令牌**。
 - 登录态放在 Electron 的 `persist:platform-<id>` 分区里，也就是 Chrome 会放的位置；Reflow 不会把它复制进缓存或导出文件。
 - 全部出网请求只有三类：平台的订单接口、平台的登录接口、导出内嵌缩略图时下载商品图。没有遥测、没有统计、没有自动更新、没有云同步、没有远程配置。
 - 日志写在 `userData/logs/app-YYYY-MM-DD.log`（NDJSON，保留 7 天，Cookie / 令牌值打码）。
-- 导出文件写到你指定的位置，路径记在本地导出记录里，可随时清空。
+- 安装包与源码运行共用同一个 `userData` 目录，覆盖安装不会丢订单缓存；卸载不删除用户数据。
 
 ## 已知限制
 
-- **只有四个平台。** 美团外卖已下架，外卖不再单列；淘宝、京东的订单里仍保留页内「网购 / 外卖」分栏。
+- **只有四个平台。** 外卖不再单列，淘宝、京东的订单里保留页内「网购 / 外卖」分栏。
 - **平台风控不受控制。** 遇到滑块或验证码，自动链路就到此为止 —— Reflow 会提示你打开页面人工完成。
 - **接口没有文档，随时会变。** 平台换个签名或换个端点，抓取就会失效，直到适配器跟上。没有 SLA。
 - **MITM 通道仅 Windows**，需要安装根证书，默认关闭，白名单只有六个域名。它是兜底手段，不是主路径。
@@ -137,9 +145,7 @@ npm run build       # 先 typecheck，再 electron-vite build → out/
 
 ## 参与贡献
 
-欢迎提 Bug、修适配器、改界面 —— 先看 [CONTRIBUTING.md](CONTRIBUTING.md)（怎么跑、怎么测、PR 要满足什么）。提 Issue 前请顺手读一下表单里的自查项：它要求日志路径和 Node 版本，因为这两项才是真正能缩短排查时间的东西。
-
-安全问题请走私密渠道，见 [SECURITY.md](SECURITY.md)，不要开公开 Issue。
+欢迎提 Bug、修适配器、改界面 —— 先看 [CONTRIBUTING.md](CONTRIBUTING.md)（怎么跑、怎么测、PR 要满足什么）。安全问题请走私密渠道，见 [SECURITY.md](SECURITY.md)，不要开公开 Issue。
 
 ## 免责声明
 
@@ -147,4 +153,4 @@ npm run build       # 先 typecheck，再 electron-vite build → out/
 
 ## 许可
 
-[MIT](LICENSE) © 2026 FaustDream。与这一领域大多数订单导出工具一致：随便用、可商用、可闭源分发，保留版权声明即可。
+[MIT](LICENSE) © 2026 FaustDream。随便用、可商用、可闭源分发，保留版权声明即可。

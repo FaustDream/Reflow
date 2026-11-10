@@ -1,7 +1,7 @@
 {
   "name": "reflow",
   "productName": "Reflow",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "把散落在各电商平台的订单数据归集到你自己手上",
   "main": "./out/main/index.js",
   "author": {
@@ -30,7 +30,10 @@
     "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:preload && npm run typecheck:web",
     "test": "vitest run",
-    "build": "npm run typecheck && electron-vite build"
+    "build": "npm run typecheck && electron-vite build",
+    "build:win": "npm run build && electron-builder --win --publish never",
+    "build:mac": "npm run build && electron-builder --mac --publish never",
+    "build:linux": "npm run build && electron-builder --linux --publish never"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
@@ -44,6 +47,7 @@
     "@types/node": "^24.0.0",
     "@vitejs/plugin-vue": "^6.0.10",
     "electron": "^44.7.0",
+    "electron-builder": "^26.18.0",
     "electron-vite": "^5.0.0",
     "element-plus": "^2.14.7",
     "pinia": "^4.0.3",

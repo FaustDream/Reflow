@@ -1,10 +1,12 @@
-# 自检脚本
+# 自检与发布脚本
 
-这些脚本用于验证难以用单测覆盖的部分（主进程 IPC、真实网络、平台接口），主进程侧的脚本照常可用。
+这些脚本用于验证难以用单测覆盖的部分（主进程 IPC、真实网络、平台接口），以及发版辅助。
 
 | 脚本 | 用途 |
 |---|---|
 | `dev-demo.mjs` | 演示模式：准备隔离 userData（引导完成 + 四平台样例单）→ 以软件渲染启动 dev（`--web` 则浏览器打开），用于「看效果」而不污染真实订单 |
+| `release-notes.mjs` | 从 `CHANGELOG.md` 截取指定版本的段落，补上各平台下载表，输出为 Release 说明正文 |
+| `mac-adhoc-sign.cjs` | electron-builder 的 `afterPack` 钩子：macOS 无开发者证书时做 ad-hoc 签名，否则 arm64 上 .app 直接被判「已损坏」 |
 | `login-capability-probe.cjs` | 探测各平台登录能力（是否有二维码接口/登录页路由），产出能力表 |
 | `qr-extract-probe.cjs` | 验证二维码提取脚本（SCRIPT_FIND_QR）在淘宝登录页上的表现，产出 `.scratch/` 截图供人眼确认 |
 | `taobao-login-probe.cjs` | 淘宝登录取证：原生接口与页面路径的真实返回结构 |
@@ -36,9 +38,12 @@ npx electron scripts/export-ipc-check.cjs
 
 # 5. 导出中心（列选择 / 汇总表 / 导出历史）
 npx electron scripts/export-ipc-031.cjs
+
+# 6. 预览某个版本的发布说明
+node scripts/release-notes.mjs 1.0.0
 ```
 
 > 本机若设置了 `ELECTRON_RUN_AS_NODE=1`，需先 `env -u ELECTRON_RUN_AS_NODE` 再执行，
 > 否则 `require('electron')` 返回的是可执行文件路径而不是 API。
 
-产物落在 `.scratch/`（已 gitignore）。
+产物落在 `.scratch/`（已 gitignore）。打包配置见根目录 `electron-builder.yml`，产物落在 `dist-release/`。

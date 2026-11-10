@@ -1,0 +1,135 @@
+# 发布：推 tag 即出三平台安装包并创建 GitHub Release。
+#
+# 触发方式：
+#   1) 推 tag：`git push origin v1.0.0` → 三平台构建 + 自动创建 Release
+#   2) 手动：Actions → 发布 → Run workflow（只构建、产出 artifact，不发版）
+#
+# 为什么 mac/linux 必须在各自系统上构建：macOS 的 .app 要在 macOS 上打包并 ad-hoc 签名
+# （改完 bundle 不重签会被判「已损坏」），Linux 的 AppImage 需要 mksquashfs。
+#
+# 版本一致性由流程保证：tag 与 package.json 不一致时直接失败，
+# 避免出现「标签 v1.0.0、包内 0.9.0」这种错位。
+
+name: 发布
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows x64（安装包 + 免安装）
+            args: --win
+          - os: macos-latest
+            label: macOS（x64 + arm64）
+            args: --mac
+          - os: ubuntu-latest
+            label: Linux x64（AppImage + deb）
+            args: --linux
+
+    env:
+      ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
+      ELECTRON_BUILDER_BINARIES_MIRROR: https://npmmirror.com/mirrors/electron-builder-binaries/
+      # 未做代码签名，别让 electron-builder 去找证书
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+      # 单测断言写死了 +08:00，runner 默认 UTC 会差 8 小时
+      TZ: Asia/Shanghai
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 校验 tag 与 package.json 版本一致
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::tag v$TAG 与 package.json 的 $PKG 不一致，先把版本号改齐再打 tag"
+            exit 1
+          fi
+          echo "版本一致：v$TAG"
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 类型检查
+        run: npm run typecheck
+
+      - name: 单元测试
+        run: npm test
+
+      - name: 构建主进程 / preload / 渲染层
+        run: npx electron-vite build
+
+      - name: 打包
+        run: npx electron-builder ${{ matrix.args }} --publish never
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflow-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            dist-release/*.exe
+            dist-release/*.dmg
+            dist-release/*.zip
+            dist-release/*.AppImage
+            dist-release/*.deb
+
+  release:
+    name: 创建 GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 汇总产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: 生成发布说明（取自 CHANGELOG.md）
+        run: node scripts/release-notes.mjs "${GITHUB_REF_NAME#v}" > release-notes.md
+
+      - name: 生成校验值
+        working-directory: artifacts
+        run: |
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" artifacts/* \
+            --title "Reflow $GITHUB_REF_NAME" \
+            --notes-file release-notes.md \
+            --verify-tag
+          gh release view "$GITHUB_REF_NAME" --json url -q .url
