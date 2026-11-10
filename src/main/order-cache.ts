@@ -92,7 +92,6 @@ export async function savePlatformCache(platform: string, orders: Order[]): Prom
   await rename(tmp, target)
 }
 
-/** 删除单个平台缓存 */
 export async function clearPlatformCache(platform: string): Promise<void> {
   try {
     await unlink(fileFor(platform))
@@ -101,7 +100,6 @@ export async function clearPlatformCache(platform: string): Promise<void> {
   }
 }
 
-/** 清空全部缓存 */
 export async function clearAllCache(): Promise<void> {
   try {
     const files = await readdir(ordersDir())

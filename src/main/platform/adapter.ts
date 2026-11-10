@@ -27,9 +27,7 @@ export interface MatchRule {
 /** 解析结果：订单 + 可选的账号/分页信息 */
 export interface ParseResult {
   orders: Order[]
-  /** 响应中携带的账号信息（如有） */
   account?: AccountInfo
-  /** 分页状态（如有） */
   pageInfo?: PageInfo
 }
 

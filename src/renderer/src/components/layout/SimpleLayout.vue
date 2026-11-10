@@ -630,7 +630,6 @@ interface PlatformRow extends AdapterSummary {
   loggedIn: boolean
 }
 
-/** 某平台的订单数 */
 function rawCountOf(platformId: string): number {
   return ordersStore.byPlatform[platformId]?.length ?? 0
 }
@@ -899,7 +898,6 @@ const API_FETCH_PLATFORMS = new Set(['taobao', 'pdd', 'jd'])
 const FETCH_PLATFORMS = new Set(['xianyu'])
 const fetchable = computed(() => FETCH_PLATFORMS.has(activeId.value) || API_FETCH_PLATFORMS.has(activeId.value))
 
-/** 当前抓取目标平台 */
 const capturePlatform = computed(() => activeId.value)
 const fetchInfo = computed(() => ordersStore.fetchStateOf(capturePlatform.value))
 const captureRunning = computed(() => fetchInfo.value.running)
@@ -914,7 +912,6 @@ const captureText = computed(() => {
   return ''
 })
 
-/** 停止当前抓取 */
 async function stopCapture(): Promise<void> {
   const p = capturePlatform.value
   if (p === 'jd' || p === 'taobao' || p === 'pdd' || p === 'xianyu') {

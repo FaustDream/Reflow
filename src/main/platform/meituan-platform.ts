@@ -101,7 +101,7 @@ function pageInfoOf(body: unknown): PageInfo | undefined {
 export function normalizeMeituanPlatformOrder(raw: MeituanOrder, account = ''): Order {
   const o = normalizeMeituanOrder(raw, account)
   o.platform = 'meituan-platform'
-  // 综合订单有 category 字段（hotel / movie / group / grocery / taxi 等）
+  // category 取值：hotel / movie / group / grocery / taxi 等
   const category = str((raw as Record<string, unknown>).category ?? (raw as Record<string, unknown>).orderCategory)
   if (category) {
     o.extra = { ...o.extra, category }
@@ -124,7 +124,6 @@ export const meituanPlatformAdapter: PlatformAdapter = {
     nicknameCookies: ['u']
   },
   matchRules: [
-    // 美团综合订单接口
     { pattern: /i\.meituan\.com\/api\/poi\/order\/list/i },
     { pattern: /i\.meituan\.com\/account\/order/i },
     // 美团 App 内嵌页

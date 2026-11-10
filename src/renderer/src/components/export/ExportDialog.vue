@@ -26,7 +26,6 @@
     </div>
 
     <div v-else class="body">
-      <!-- 范围 -->
       <section class="block">
         <div class="block-title">导出范围</div>
         <el-radio-group v-model="scope" size="small" class="scope-group">
@@ -42,7 +41,6 @@
         </div>
       </section>
 
-      <!-- 格式 -->
       <section class="block">
         <div class="block-title">格式</div>
         <div class="format-list">
@@ -60,7 +58,6 @@
         </div>
       </section>
 
-      <!-- 选项 -->
       <section class="block options">
         <el-checkbox v-model="includeImages" :disabled="isCsv">
           内嵌商品图
@@ -72,7 +69,6 @@
         </el-checkbox>
       </section>
 
-      <!-- 列选择 -->
       <section class="block">
         <div class="block-title">
           导出列
@@ -175,7 +171,6 @@ const props = defineProps<{
   currentOrders: Order[]
   /** 表格中勾选的订单 */
   selectedOrders: Order[]
-  /** 打开时的默认范围 */
   defaultScope?: Scope
 }>()
 

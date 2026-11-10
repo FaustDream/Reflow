@@ -66,12 +66,10 @@ app.whenReady().then(async () => {
       `window.api.exportExcel(${JSON.stringify(orders)}, ${JSON.stringify(platforms)}, false)`
     )
 
-  // A. 导出本平台（得物）
   const dewu = parsed.find((p) => p.id === 'dewu').orders
   const one = await run(dewu, ['dewu'])
   console.log('\n[本平台导出]', JSON.stringify(one))
 
-  // B. 导出全部
   const all = parsed.flatMap((p) => p.orders)
   const platforms = [...new Set(all.map((o) => o.platform))]
   const every = await run(all, platforms)

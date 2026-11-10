@@ -256,7 +256,6 @@ const api = {
   /** 启动时恢复全部平台缓存 */
   loadOrderCache: (): Promise<Record<string, unknown[]>> => ipcRenderer.invoke('cache:load-all'),
 
-  /** 缓存概览 */
   getCacheSummary: (): Promise<Array<{ platform: string; count: number; savedAt: number }>> =>
     ipcRenderer.invoke('cache:summary'),
 
@@ -264,11 +263,9 @@ const api = {
   saveOrderCache: (platform: string, orders: unknown[]): Promise<{ ok: boolean; message?: string }> =>
     ipcRenderer.invoke('cache:save', { platform, orders }),
 
-  /** 清除某平台缓存 */
   clearPlatformCache: (platform: string): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke('cache:clear-platform', platform),
 
-  /** 清空全部缓存 */
   clearAllCache: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('cache:clear-all'),
 
   /** 工单 025：诊断快照（不含 Cookie / 订单内容） */
@@ -313,7 +310,6 @@ const api = {
   addAccount: (platform: string): Promise<{ ok: boolean; account?: unknown }> =>
     ipcRenderer.invoke('accounts:add', platform),
 
-  /** 切换活动账号 */
   activateAccount: (id: string): Promise<{ ok: boolean; partition?: string; message?: string }> =>
     ipcRenderer.invoke('accounts:activate', id),
 
@@ -350,7 +346,6 @@ const api = {
     platforms: string[]
   }> => ipcRenderer.invoke('onboarding:load'),
 
-  /** 完成引导 */
   completeOnboarding: (platforms: string[]): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke('onboarding:complete', { platforms }),
 

@@ -52,7 +52,6 @@ export class AdapterRegistry {
     return null
   }
 
-  /** 当前生效的匹配规则 */
   rulesFor(adapter: PlatformAdapter): MatchRule[] {
     return adapter.matchRules
   }

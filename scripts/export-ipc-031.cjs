@@ -43,7 +43,6 @@ app.whenReady().then(async () => {
   const platforms = [...new Set(all.map((o) => o.platform))]
   console.log('订单:', all.length, '平台:', platforms.join(','))
 
-  // 1. 列清单
   const cols = await win.webContents.executeJavaScript(
     `window.api.getExportColumns(${JSON.stringify(platforms)})`
   )

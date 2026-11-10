@@ -238,7 +238,6 @@ function registerIpc(): void {
   setupDetailFetchIpc({ getMainWindow: safeGetMainWindow })
   // 登录：二维码（阿里/京东/拼多多/快手）或小弹窗（其余平台），不再占用整页 Tab
   setupLoginIpc(safeGetMainWindow)
-  // 工单 010：滚动加载型平台的自动翻页
   // 工单 023：订单本地缓存（关掉应用后再打开，历史订单还在）
   setupOrderCacheIpc()
   // 工单 025：诊断面板（只读快照，不含 Cookie/订单内容）

@@ -102,7 +102,6 @@ export function ensureDefaultAccount(accounts: Account[], platform: string): Acc
   ]
 }
 
-/** 取某平台的下一个可用槽位 */
 export function nextSlot(accounts: Account[], platform: string): number {
   const used = accounts.filter((a) => a.platform === platform).map((a) => a.slot)
   return used.length ? Math.max(...used) + 1 : 0

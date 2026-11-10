@@ -61,7 +61,6 @@ const monthMarks = computed(() => {
   return marks
 })
 
-/** 顶部月份标签：按列对齐（每列一周），只有 1 号所在列才标月份 */
 const monthSlots = computed(() =>
   columns.value.map((_, ci) => {
     const month = monthMarks.value.get(ci)

@@ -179,7 +179,6 @@ export type FetchPlatform = 'jd' | 'taobao' | 'pdd' | 'xianyu'
 export interface OrdersFetchEvent {
   platform: FetchPlatform
   phase: 'started' | 'progress' | 'completed'
-  /** 已完成页数 */
   pages?: number
   /** 总页数（已知时） */
   totalPages?: number
@@ -187,7 +186,6 @@ export interface OrdersFetchEvent {
   orders?: number
   /** 结构化进度说明（如「第 2/9 年 · 2024 年 第 3 页」） */
   detail?: string
-  /** 进度说明 */
   message?: string
   /** completed 时携带 */
   ok?: boolean

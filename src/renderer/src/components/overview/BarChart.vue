@@ -41,11 +41,9 @@ interface BarItem {
 const props = withDefaults(
   defineProps<{
     items: BarItem[]
-    /** 取值维度 */
     metric?: 'count' | 'amount'
     /** 高亮的标签（如当前统计年份） */
     activeLabel?: string
-    /** 柱顶显示数值 */
     showValue?: boolean
     /** 底部图例（交易成功 / 退款） */
     showLegend?: boolean

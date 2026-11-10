@@ -61,7 +61,6 @@ function sseWrite(client: SseClient, channel: string, payload: unknown): void {
   }
 }
 
-/** 向所有已连接的浏览器广播一条主进程推送 */
 function broadcast(channel: string, payload: unknown): void {
   if (clients.size === 0) return
   for (const client of clients) sseWrite(client, channel, payload)

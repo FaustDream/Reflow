@@ -11,7 +11,6 @@ import type { ExportColumn, Order } from '../../shared/types/order'
 import { ORDER_STATE_LABEL, orderStateOf } from '../../shared/order-state'
 import { resolveExportColumns } from './excel'
 
-/** Excel 识别 UTF-8 的 BOM */
 const BOM = '\ufeff'
 
 /**

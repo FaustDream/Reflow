@@ -28,7 +28,6 @@
       </div>
 
       <div class="pane-grid">
-        <!-- 各平台月度走势：一平台一条线 -->
         <section class="card span2">
           <header class="card-head">
             <span>各平台月度走势（近 12 个月）</span>
@@ -45,7 +44,6 @@
           />
         </section>
 
-        <!-- 指标矩阵：平台 × 关键指标 -->
         <section class="card span3">
           <header class="card-head"><span>平台指标矩阵</span><em>金额口径 = 交易成功（2026-11-08）</em></header>
           <table class="matrix">

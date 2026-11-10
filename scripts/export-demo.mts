@@ -66,7 +66,6 @@ console.log('平台数：', platformIds.length, platformIds.join(', '))
 console.log('导出列数：', cols.length, `（核心 ${19} + 扩展 ${cols.length - 19}）`)
 console.log('文件：', outFile, `${(buffer.length / 1024).toFixed(1)} KB`)
 
-// 抽样检查：每平台首单的关键字段
 const headers = cols.map((c) => c.header)
 console.log('\n表头：')
 console.log(headers.join(' | '))

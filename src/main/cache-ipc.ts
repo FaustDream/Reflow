@@ -71,7 +71,6 @@ export function setupOrderCacheIpc(): void {
     }
   )
 
-  /** 清除某平台缓存 */
   ipcMain.handle('cache:clear-platform', async (_event, platform: string) => {
     const t = timers.get(platform)
     if (t) clearTimeout(t)
@@ -81,7 +80,6 @@ export function setupOrderCacheIpc(): void {
     return { ok: true }
   })
 
-  /** 清空全部缓存 */
   ipcMain.handle('cache:clear-all', async () => {
     for (const t of timers.values()) clearTimeout(t)
     timers.clear()

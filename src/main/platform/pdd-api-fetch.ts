@@ -147,10 +147,8 @@ export async function fetchPddOrdersByApi(
       return { pages, orders: seen.size, complete: false }
     }
     /**
-     * 推进游标（2026-11-01 逆向 react_orders chunk 定型的协议）：
-     * v4 的 `offset` 参数 = 上一批**最后一条订单自己的 offset 字段**（fallback order_sn），
-     * 不是页号×30 —— 竞品不懂这个语义，所以它的「直连方案」只能抓到第一批。
-     * 用对游标后**不需要 anti_content**，纯 Cookie 直连翻全量（实测 17 页 494 单）。
+     * 推进游标：v4 的 `offset` 参数 = 上一批最后一条订单自己的 offset 字段
+     * （fallback order_sn），不是页号 × 页大小。
      */
     const last = orders[orders.length - 1]
     const rawOffset = last.offset

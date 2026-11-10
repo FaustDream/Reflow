@@ -120,9 +120,6 @@ const displayRows = computed(() => {
   return list
 })
 
-// ---------------------------------------------------------------------------
-// 列定义：cellRenderer 里的 h() 渲染；商品/店铺用 flexGrow 吃掉剩余宽度
-// ---------------------------------------------------------------------------
 function moneyCell(v: unknown): string {
   const s = String(v ?? '').trim()
   if (s === '') return '—'

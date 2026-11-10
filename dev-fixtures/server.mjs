@@ -38,7 +38,6 @@ createServer(async (req, res) => {
     return
   }
 
-  // 默认返回自测页
   const file = url.pathname === '/' ? 'hook-test.html' : url.pathname.replace(/^\/+/, '')
   try {
     const body = await readFile(join(here, file))

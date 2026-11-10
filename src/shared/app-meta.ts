@@ -12,7 +12,6 @@ export const APP_NAME = 'Reflow'
 /** 作者署名（GitHub 账号） */
 export const AUTHOR = 'FaustDream'
 
-/** 项目主页 */
 export const REPO_URL = 'https://github.com/FaustDream/Reflow'
 
 /** 写进导出文件元数据 / 关于页的完整署名 */

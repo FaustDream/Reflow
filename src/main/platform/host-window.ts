@@ -71,7 +71,7 @@ export async function openHiddenHost(options: HiddenHostOptions): Promise<Hidden
     try {
       await win.webContents.setUserAgent(options.userAgent)
     } catch {
-      /* 无关紧要 */
+      /* UA 设置失败不影响后续加载 */
     }
     try {
       await withTimeout(win.loadURL(options.url), 40_000, options.openLabel)

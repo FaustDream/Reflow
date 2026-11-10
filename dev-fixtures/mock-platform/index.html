@@ -39,7 +39,6 @@
       logEl.prepend(line)
     }
 
-    // ---- ① XHR ----
     function fireXhr() {
       log('XMLHttpRequest GET /api/orders-xhr')
       const xhr = new XMLHttpRequest()
@@ -48,7 +47,6 @@
       xhr.send()
     }
 
-    // ---- ② fetch ----
     function fireFetch() {
       log('fetch GET /api/orders-fetch')
       fetch('/api/orders-fetch?t=' + Date.now())

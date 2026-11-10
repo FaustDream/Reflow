@@ -21,37 +21,22 @@ export interface Order {
   account: string
   /** 订单号（平台唯一） */
   orderId: string
-  /** 下单时间 */
   createdAt: DateTimeString | null
-  /** 商品标题 */
   title: string
-  /** 商品图 URL */
   imageUrl: string
-  /** 单价 */
   unitPrice: string
-  /** 实付金额 */
   paidAmount: string
-  /** 数量 */
   quantity: number | null
   /** 订单状态（平台原文，不做翻译） */
   status: string
-  /** 店铺/卖家名 */
   shopName: string
-  /** 收货人 */
   receiverName: string
-  /** 收货地址 */
   receiverAddress: string
-  /** 收货电话 */
   receiverPhone: string
-  /** 物流公司 */
   logisticsCompany: string
-  /** 运单号 */
   trackingNo: string
-  /** 付款时间 */
   paidAt: DateTimeString | null
-  /** 发货时间 */
   shippedAt: DateTimeString | null
-  /** 成交时间 */
   completedAt: DateTimeString | null
   /** 平台特有字段（闲鱼币抵扣、Offer ID、发票四要素…），导出为 extended columns */
   extra: Record<string, string>

@@ -25,14 +25,11 @@
 
       ReflowHook.installPageHooks(NONCE)
 
-      // 1) fetch
       fetch('/api/orders.json').then((r) => r.json()).then((d) => { window.__fetchDone = d })
-      // 2) XHR
       const xhr = new XMLHttpRequest()
       xhr.open('GET', '/api/orders.json')
       xhr.onload = () => { window.__xhrDone = xhr.status }
       xhr.send()
-      // 3) JSONP
       window.handleJsonp = (data) => { window.__jsonpDone = data }
       const s = document.createElement('script')
       s.src = '/jsonp.js?callback=handleJsonp'

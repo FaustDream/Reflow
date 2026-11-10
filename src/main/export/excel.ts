@@ -179,7 +179,6 @@ function fillSheet(
     width: col.width ?? 16
   }))
 
-  // 表头样式
   styleHeaderRow(sheet)
 
   // 分批写入（>1000 单时避免一次性行对象膨胀）

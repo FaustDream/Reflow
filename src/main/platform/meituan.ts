@@ -97,7 +97,6 @@ interface MeituanPayload {
 export function extractMeituanOrders(body: unknown): MeituanOrder[] {
   const b = body as Record<string, unknown> | null
   const data = (b?.data ?? {}) as Record<string, unknown>
-  // 原版小程序是 data.digestlist；H5 是 data.orderList
   const candidates = [
     data.orderList,
     data.digestlist,

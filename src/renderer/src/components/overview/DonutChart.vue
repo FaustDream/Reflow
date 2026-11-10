@@ -53,7 +53,6 @@ const props = withDefaults(
     /** 中心大数字（已格式化） */
     centerValue?: string
     centerLabel?: string
-    /** 图例数值形态 */
     metric?: 'count' | 'amount'
   }>(),
   { centerValue: '', centerLabel: '', metric: 'count' }

@@ -8,7 +8,6 @@
       @mousemove="onMove"
       @mouseleave="hoverIndex = -1"
     >
-      <!-- 横向网格线 + Y 轴刻度 -->
       <g v-for="(gv, gi) in gridLines" :key="gi">
         <line
           :x1="padL"
@@ -22,7 +21,6 @@
         </text>
       </g>
 
-      <!-- 序列折线 + 数据点 -->
       <g v-for="(s, si) in series" :key="s.name">
         <polyline
           :points="s.points.map((v, i) => `${xOf(i)},${yOf(v)}`).join(' ')"

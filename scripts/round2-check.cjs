@@ -51,7 +51,6 @@ app.whenReady().then(async () => {
   const partitions = accts.filter((a) => a.platform === 'dewu').map((a) => a.partition)
   console.log('[账号] 分区互异:', new Set(partitions).size === partitions.length ? 'YES' : 'NO ' + partitions)
 
-  // 切换 + 重命名
   const second = accts.find((a) => a.platform === 'dewu' && a.slot === 1)
   await js(`window.api.activateAccount('${second.id}')`)
   await js(`window.api.renameAccount('${second.id}', '副号')`)
@@ -61,7 +60,6 @@ app.whenReady().then(async () => {
     accts.filter((a) => a.platform === 'dewu').map((a) => `${a.id}(${a.displayName}) active=${a.active}`).join(', ')
   )
 
-  // 清理：删掉第二个账号
   const removed = await js(`window.api.removeAccount('${second.id}')`)
   console.log('[账号] 删除第二个:', JSON.stringify(removed))
 
@@ -70,7 +68,6 @@ app.whenReady().then(async () => {
   const all = parsed.flatMap((p) => p.orders)
   const platforms = [...new Set(all.map((o) => o.platform))]
 
-  // CSV
   const csvResult = await js(
     `window.api.exportExcel(${JSON.stringify(all)}, ${JSON.stringify(platforms)}, false, { format: 'csv' })`
   )
@@ -84,7 +81,6 @@ app.whenReady().then(async () => {
     console.log('  含中文表头:', text.includes('订单号') ? 'YES' : 'NO')
   }
 
-  // 多 Sheet
   const sheetResult = await js(
     `window.api.exportExcel(${JSON.stringify(all)}, ${JSON.stringify(platforms)}, false, { layout: 'multi-sheet' })`
   )

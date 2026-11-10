@@ -322,7 +322,6 @@ const donutCenter = computed(() =>
     : `¥${compactMoney(stats.value.paidAmount)}`
 )
 
-/** 当前年份的退款率（仪表盘） */
 const yearRefundRate = computed(() => {
   const y = stats.value.year
   const denom = y.paidAmount + y.refundAmount

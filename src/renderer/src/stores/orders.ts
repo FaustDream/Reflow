@@ -17,7 +17,6 @@ interface FetchState {
   running: boolean
   message: string
   error: string
-  /** 已完成页数 */
   pages?: number
   /** 已抓订单数（累计） */
   orders?: number

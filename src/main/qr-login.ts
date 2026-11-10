@@ -20,7 +20,6 @@ import { BrowserWindow, net, session, type Session } from 'electron'
 import { EventEmitter } from 'node:events'
 import { debug, error, info, warn } from './logging/logger'
 
-/** 一次登录会话 */
 export interface QrLoginSession {
   id: string
   platformId: string
@@ -49,7 +48,6 @@ interface CookieRule {
   domainIncludes: string
 }
 
-/** 平台登录策略 */
 interface QrStrategy {
   /** A 路径：原生接口；缺省则走 B/C 路径 */
   native?: {
@@ -898,12 +896,6 @@ async function clickByText(win: BrowserWindow, text: string, timeoutMs: number):
   return false
 }
 
-/**
- * 在窗口的所有 frame（主文档 + 子 frame）里找二维码元素。
- *
- * 闲鱼登录页的码在跨域 iframe（passport.goofish.com/mini_login）里，只扫主文档
- * 够不着——用 WebFrameMain 逐 frame 执行（Electron 28+ 支持，与进程隔离无关）。
- */
 /**
  * 在窗口的所有 frame（主文档 + 子 frame）里找二维码元素。
  *

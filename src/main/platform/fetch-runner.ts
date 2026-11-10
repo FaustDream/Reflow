@@ -147,7 +147,7 @@ export function setupOrdersFetchIpc({ getMainWindow, engine, getSession }: Fetch
           win.webContents.send('capture:parse-error', { ...outcome.error, webviewId: -1 })
         }
       } catch {
-        /* 窗口销毁竞态 */
+        /* 与上面同理：窗口已销毁 */
       }
     }
     return freshCount
