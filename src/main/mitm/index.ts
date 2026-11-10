@@ -7,7 +7,7 @@
  *   两者最终都进 `capture-engine`（见 capture-bridge 的 feedExternalCapture），
  *   所以适配器、去重、导出全部复用，不需要第二套解析。
  *
- * 安全边界（docs/033 §4）：只解密白名单域名、只观察不改写、退出必还原、崩溃兜底。
+ * 安全边界（工单 033 §4）：只解密白名单域名、只观察不改写、退出必还原、崩溃兜底。
  */
 import { app, ipcMain, session } from 'electron'
 import { readFileSync } from 'node:fs'

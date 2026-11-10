@@ -7,7 +7,7 @@
  * - CSV 同样规模可用
  *
  * 阈值取得比较宽松（CI 机器性能差异大），目的是**拦住数量级退化**，
- * 而不是精确计时。真正的实测数据记录在 docs/test-report-v1.md。
+ * 而不是精确计时。真正的实测数据记录在工单 029 的测试报告里（本地归档）。
  */
 import { describe, expect, it } from 'vitest'
 import ExcelJS from 'exceljs'

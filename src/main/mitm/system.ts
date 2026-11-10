@@ -5,7 +5,7 @@
  * - 代理：`HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`（WinINET）
  * - 证书：`certutil -addstore -user Root`（当前用户「受信任的根证书颁发机构」）
  *
- * 关键约束（docs/033 §4）：
+ * 关键约束（工单 033 §4）：
  * 1. 改动前**先快照**原代理设置，还原时逐字段写回（用户可能本来就有公司代理）
  * 2. 状态落盘，启动时若发现「上次没还原」→ 自动还原（否则用户会断网）
  * 3. 退出前必须还原（`before-quit` 里同步执行）

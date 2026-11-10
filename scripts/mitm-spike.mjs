@@ -11,7 +11,7 @@
  *   node scripts/mitm-spike.mjs --run                # 起代理并打印命中的订单接口（配合 --install 用）
  *   node scripts/mitm-spike.mjs --restore            # 还原：删证书 + 关代理（务必执行）
  *
- * 安全边界（与 docs/033 一致）：
+ * 安全边界（与工单 033 一致）：
  *   - 只对白名单订单域名做 TLS 解密，其它域名一律 CONNECT 隧道透传，不解密不记录
  *   - 只打印 URL 与响应长度，不落盘 Cookie / 请求头 / 响应原文
  *   - 证书只装在「当前用户」存储（certutil -user，不需要管理员，也不需要 UAC）
