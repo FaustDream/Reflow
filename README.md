@@ -150,6 +150,10 @@ Bug reports, adapter fixes and UI work are welcome — start with [CONTRIBUTING.
 
 Unofficial tooling, not affiliated with or endorsed by any platform. It reads **your own** account data through the web endpoints your browser already uses, and it deliberately avoids bypassing security mechanisms: signatures are computed by the platform's own page SDK, no certificates are installed unless you explicitly enable MITM, and no admin rights are needed. Scraping may violate a platform's terms of service — that decision, and the account risk that comes with it, is yours. See [LICENSE](LICENSE) for the warranty disclaimer.
 
+## Community
+
+This project recognizes and links to the [LINUX DO](https://linux.do/) community, where releases are announced. Issues and pull requests from the community are welcome.
+
 ## License
 
 [MIT](LICENSE) © 2026 FaustDream. Use it, ship it, sell it — just keep the copyright notice.
