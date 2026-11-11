@@ -434,6 +434,9 @@ export function setupOrdersFetchIpc({ getMainWindow, engine, getSession }: Fetch
                   message: '正在按年拉取全部订单',
                   detail: `第 ${p.yearsDone}/${p.yearsTotal} 年 · ${p.yearLabel} 第 ${p.page} 页`
                 }),
+              // 页级重试、某年到底这类瞬时说明：不接的话界面上看不到，
+              // 「抓取为什么停在这一年」就只能去翻磁盘日志
+              onProgressDetail: (message) => emit({ platform, phase: 'progress', message }),
               cancelCheck,
               // 默认拉全量：京东列表一次只出一年，只抓「今年」会出现
               // 「登录成功但只有几条数据」（2026-10-29 用户反馈过的现象）

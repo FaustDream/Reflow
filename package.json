@@ -1,7 +1,7 @@
 {
   "name": "reflow",
   "productName": "Reflow",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "把散落在各电商平台的订单数据归集到你自己手上",
   "main": "./out/main/index.js",
   "author": {
