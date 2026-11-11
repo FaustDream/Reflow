@@ -6,10 +6,9 @@ import { setupMitmIpc } from './mitm'
 import { adapterRegistry } from './platform/registry'
 import { setupExportIpc } from './export'
 import { setupDetailFetchIpc } from './platform/detail-fetch'
-import { setupImportIpc } from './import-ipc'
 import { setupLoginIpc } from './login-ipc'
+import { warmUpLogins } from './platform/login-warmup'
 import { setupOrderCacheIpc, flushAllCache } from './cache-ipc'
-import { setupDiagnosticsIpc } from './diagnostics-ipc'
 import { setupAccountsIpc } from './accounts-ipc'
 import { setupOnboardingIpc } from './onboarding'
 import { initLogging, info as logInfo, warn as logWarn } from './logging/logger'
@@ -251,16 +250,19 @@ function registerIpc(): void {
   // 工单 034：MITM 抓取通道（可选，需先装证书；默认不开启）
   setupMitmIpc()
   setupExportIpc(safeGetMainWindow, adapterRegistry)
-  setupImportIpc(safeGetMainWindow)
   setupDetailFetchIpc({ getMainWindow: safeGetMainWindow })
   // 登录：二维码（阿里/京东/拼多多/快手）或小弹窗（其余平台），不再占用整页 Tab
   setupLoginIpc(safeGetMainWindow)
   // 工单 023：订单本地缓存（关掉应用后再打开，历史订单还在）
   setupOrderCacheIpc()
-  // 工单 025：诊断面板（只读快照，不含 Cookie/订单内容）
-  setupDiagnosticsIpc()
   // 工单 021：多账号聚合（每账号独立 partition）
   setupAccountsIpc({ getMainWindow: safeGetMainWindow })
   // 工单 024：首次启动引导
   setupOnboardingIpc()
+
+  // 启动自愈：已登录但会话 Cookie 缺失的平台（淘宝 cookie2 这类）静默访问一次首页补种。
+  // 延后几秒，别和首屏抢带宽；失败只记日志，不打断启动。
+  setTimeout(() => {
+    void warmUpLogins().catch(() => undefined)
+  }, 4000)
 }

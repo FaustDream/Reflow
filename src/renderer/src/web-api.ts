@@ -173,11 +173,6 @@ const webApi: ReflowApi = {
       ...(options ?? {})
     }),
   cancelFetchOrders: (platform) => invoke<{ ok: boolean }>('orders:cancel-fetch', platform),
-  importOrdersFile: (platform) =>
-    invoke<{ ok: boolean; imported: number; skipped: number; message?: string }>(
-      'orders:import-file',
-      platform
-    ),
   onOrdersFetchEvent: (listener) => on('orders:fetch-event', listener),
   onOrdersCacheUpdated: (listener) => on<string>('orders:cache-updated', listener),
 
@@ -205,20 +200,6 @@ const webApi: ReflowApi = {
     invoke<{ ok: boolean; message?: string }>('cache:save', { platform, orders }),
   clearPlatformCache: (platform) => invoke<{ ok: boolean }>('cache:clear-platform', platform),
   clearAllCache: () => invoke<{ ok: boolean }>('cache:clear-all'),
-
-  getDiagnostics: () => invoke<unknown>('diagnostics:snapshot'),
-  getRecentCaptures: () =>
-    invoke<
-      Array<{
-        url: string
-        kind: string
-        status: number
-        ts: number
-        platform: string | null
-        outcome: 'ok' | 'error' | 'unmatched'
-        detail: string
-      }>
-    >('capture:recent'),
 
   listAccounts: () =>
     invoke<

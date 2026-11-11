@@ -118,4 +118,13 @@ describe('工单 040：ret 错误翻译', () => {
     expect(taobaoRetError(['FAIL_SYS_USER_VALIDATE::需要验证'])).toBeInstanceOf(TaobaoValidateError)
     expect(taobaoRetError(['FAIL_SYS_OTHER::未知'])).toBeInstanceOf(Error)
   })
+
+  it('风控优先于会话过期：同时出现时判滑块，不误导用户重扫', () => {
+    const err = taobaoRetError([
+      'FAIL_SYS_SESSION_EXPIRED::Session过期',
+      'FAIL_SYS_USER_VALIDATE::哎哟喂,被挤爆啦'
+    ])
+    expect(err).toBeInstanceOf(TaobaoValidateError)
+    expect(err?.message).toContain('人机验证')
+  })
 })

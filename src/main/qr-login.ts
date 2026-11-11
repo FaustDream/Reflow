@@ -163,6 +163,39 @@ async function hasAnyCookie(partition: string, rules: CookieRule[]): Promise<boo
 }
 
 /**
+ * 清掉分区里匹配规则的**旧**登录凭据（2026-11-11）。
+ *
+ * 为什么要清：扫码确认后 `finishLoginInWindow` 的「分区里已有登录凭据，跳过落地跳转」
+ * 会被残留的旧 `unb` 骗过 —— 那个 unb 是上一次会话留下的、服务端早已失效，
+ * 直接放行导致这次扫码的 redirect 令牌没被消费、新会话没落地，抓取立刻
+ * FAIL_SYS_SESSION_EXPIRED（用户看到的就是「扫了码、显示成功、还是登不上」）。
+ * 先清掉旧凭据，`hasAnyCookie` 才会判 false，落地跳转才会真正走完、用这次扫码换到新 unb。
+ */
+async function clearLoginCookies(partition: string, rules: CookieRule[]): Promise<void> {
+  try {
+    const sess = session.fromPartition(partition)
+    const all = await sess.cookies.get({})
+    for (const c of all) {
+      if (!rules.some((r) => c.name === r.name && (c.domain ?? '').includes(r.domainIncludes))) {
+        continue
+      }
+      const host = (c.domain ?? '').replace(/^\./, '')
+      if (!host) continue
+      try {
+        await sess.cookies.remove(`${c.secure ? 'https' : 'http'}://${host}${c.path || '/'}`, c.name)
+      } catch {
+        // 个别 Cookie 因 domain/path 组合删不掉也不阻断整体登录
+      }
+    }
+  } catch (e) {
+    warn('login', '清理旧登录凭据失败', {
+      partition,
+      error: e instanceof Error ? e.message : String(e)
+    })
+  }
+}
+
+/**
  * 给 Promise 加超时（超时返回 null，不抛错）。
  *
  * `webContents.loadURL` 没有超时：跳转页若卡在某个资源上，会把整个扫码轮询拖住，
@@ -309,6 +342,9 @@ function alibabaStrategy(
              */
             const redirect = absolutize(data.url || data.redirectUrl || '')
             const urls = redirect ? [redirect, opts.redirectTo] : [opts.redirectTo]
+            // 先清旧凭据再落地：残留的失效 unb 会让 finishLoginInWindow 误判「已登录」
+            // 而跳过跳转，这次扫码就白扫了（2026-11-11 实测抓取立刻 SESSION_EXPIRED）
+            await clearLoginCookies(partition, opts.verify)
             const ok = await finishLoginInWindow(partition, urls, opts.verify)
             if (!ok) {
               return {
@@ -697,6 +733,11 @@ export class QrLoginService extends EventEmitter {
     if (status.state === 'success' || status.state === 'expired' || status.state === 'failed') {
       // 成功后不立刻销毁 DOM 窗口：Cookie 已落盘，但页面可能还在跳转。
       // 延迟关闭，确保 Set-Cookie 全部写入 partition。
+      //
+      // 成功等更久（2026-11-11）：登录判定只看 `unb`，但淘宝会话还依赖
+      // `sca` / `tbsa` / `sgcookie` 这些要等登录后跳转、异步请求才补齐的项。
+      // 1.5 秒关窗会让会话停在半成品状态 —— 表现为「显示已登录，抓取却报
+      // 会话失效，重启后宿主页直接跳登录页」。
       const win = entry.window
       entry.stopped = true
       if (entry.timer) clearTimeout(entry.timer)
@@ -706,7 +747,7 @@ export class QrLoginService extends EventEmitter {
         if (win && !win.isDestroyed()) win.destroy()
         const cur = this.active.get(platformId)
         if (cur?.session.id === entry.session.id) this.active.delete(platformId)
-      }, 1500)
+      }, status.state === 'success' ? 5000 : 800)
     }
   }
 

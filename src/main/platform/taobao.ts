@@ -200,7 +200,14 @@ export const taobaoAdapter: PlatformAdapter = {
     cookies: [{ name: 'unb', domainIncludes: 'taobao.com' }],
     userIdCookie: 'unb',
     // tracknick 由登录页写，_nk_ 由 m.taobao.com 写；两者不一定同时存在
-    nicknameCookies: ['tracknick', '_nk_']
+    nicknameCookies: ['tracknick', '_nk_'],
+    // 淘宝这三个都是会话级 Cookie（无 Expires），Electron 不落盘 → 关一次应用就掉登录。
+    // `unb` 只是身份，`cookie2` 才是这次会话的凭据：只持久化 unb 时，重启后界面仍显示
+    // 已登录、但 mtop 一律 SESSION_EXPIRED（2026-11-11 实测踩过）。三个一起改写。
+    persistCookies: ['unb', 'cookie2', '_tb_token_'],
+    // 会话不只靠上面三个：sca / tbsa / _samesite_flag_ 同样无 Expires，
+    // 少一个重启后宿主页就跳登录页（2026-11-11 实测），整分区一起落盘
+    persistAllSession: true
   },
   matchRules: [
     // 大小写不敏感匹配（原版 isBoughtListMtopUrl 用 toLowerCase）

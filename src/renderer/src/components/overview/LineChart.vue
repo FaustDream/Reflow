@@ -1,5 +1,10 @@
 <template>
-  <div ref="wrap" class="line-chart" :style="{ height: `${height}px` }">
+  <div
+    ref="wrap"
+    class="line-chart"
+    :class="{ pickable }"
+    :style="{ height: `${height}px` }"
+  >
     <svg
       v-if="width > 0 && hasData"
       :width="width"
@@ -7,7 +12,18 @@
       :viewBox="`0 0 ${width} ${height}`"
       @mousemove="onMove"
       @mouseleave="hoverIndex = -1"
+      @click="onClick"
     >
+      <!-- 选中月份的竖向高亮带（来自 active-label） -->
+      <rect
+        v-if="activeIndex >= 0"
+        :x="xOf(activeIndex) - bandWidth / 2"
+        :y="padT"
+        :width="bandWidth"
+        :height="height - padT - padB"
+        class="active-band"
+      />
+
       <g v-for="(gv, gi) in gridLines" :key="gi">
         <line
           :x1="padL"
@@ -20,6 +36,16 @@
           {{ compactOf(gv) }}
         </text>
       </g>
+
+      <!-- 选中月份：竖向虚线（高亮带在底层，见文件顶部） -->
+      <line
+        v-if="activeIndex >= 0"
+        :x1="xOf(activeIndex)"
+        :x2="xOf(activeIndex)"
+        :y1="padT"
+        :y2="height - padB"
+        class="active-line"
+      />
 
       <g v-for="(s, si) in series" :key="s.name">
         <polyline
@@ -38,6 +64,15 @@
           <title>{{ tipOf(s, i) }}</title>
         </circle>
       </g>
+
+      <!-- 选中点上再压一个实心圆：折线交叉处光靠色带分不清选中的是哪个点 -->
+      <circle
+        v-if="activeIndex >= 0 && series.length"
+        :cx="xOf(activeIndex)"
+        :cy="yOf(series[0].points[activeIndex] ?? 0)"
+        r="4.5"
+        class="active-dot"
+      />
 
       <!-- hover 竖线 -->
       <line
@@ -95,9 +130,15 @@ const props = withDefaults(
     metric?: 'count' | 'amount'
     height?: number
     showLegend?: boolean
+    /** 高亮某个标签（如锁定的月份），传 label 原值 */
+    activeLabel?: string
+    /** 允许点击选点：开启后鼠标变手型，点击 emit('pick', label) */
+    pickable?: boolean
   }>(),
-  { metric: 'amount', height: 190, showLegend: true }
+  { metric: 'amount', height: 190, showLegend: true, activeLabel: '', pickable: false }
 )
+
+const emit = defineEmits<{ pick: [label: string] }>()
 
 const wrap = ref<HTMLElement | null>(null)
 const width = ref(0)
@@ -125,11 +166,21 @@ const padB = 26
 const hasData = computed(() => props.labels.length >= 2 && props.series.some((s) => s.points.length === props.labels.length))
 
 /** x 轴点间距（首尾留 padding，点落在格心） */
-function xOf(i: number): number {
+const stepX = computed(() => {
   const inner = width.value - padL - padR
-  const step = props.labels.length > 1 ? inner / (props.labels.length - 1) : inner
-  return padL + i * step
+  return props.labels.length > 1 ? inner / (props.labels.length - 1) : inner
+})
+
+function xOf(i: number): number {
+  return padL + i * stepX.value
 }
+
+const activeIndex = computed(() =>
+  props.activeLabel ? props.labels.indexOf(props.activeLabel) : -1
+)
+
+/** 高亮带宽度：不超过点距的 70%，窄屏也不糊成一片 */
+const bandWidth = computed(() => Math.max(6, Math.min(stepX.value * 0.7, 44)))
 
 const maxVal = computed(() => {
   let top = 0
@@ -137,11 +188,11 @@ const maxVal = computed(() => {
   return top || 1
 })
 
-/** Y 轴网格：4 段，刻度取「好看」的整数（1/2/5×10^k） */
+/** Y 轴网格：4 段，刻度取「好看」的整数；倍数给密一点，峰值 688 时取 800 而不是 1000 */
 const yMax = computed(() => {
   const raw = maxVal.value
   const exp = Math.pow(10, Math.floor(Math.log10(raw)))
-  for (const m of [1, 2, 5, 10]) {
+  for (const m of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) {
     const v = m * exp
     if (v >= raw) return v
   }
@@ -158,9 +209,7 @@ function yOf(v: number): number {
 /** x 标签抽稀：至少 42px 一个标签 */
 const labelStep = computed(() => {
   if (width.value <= 0) return 1
-  const inner = width.value - padL - padR
-  const step = props.labels.length > 1 ? inner / (props.labels.length - 1) : inner
-  return Math.max(1, Math.ceil(42 / Math.max(step, 1)))
+  return Math.max(1, Math.ceil(42 / Math.max(stepX.value, 1)))
 })
 
 function shortLabel(lb: string): string {
@@ -191,13 +240,22 @@ function tipOf(s: LineSeries, i: number): string {
 // hover：竖线跟随鼠标吸附最近的数据点；圆点上挂原生 <title> 提示数值
 const hoverIndex = ref(-1)
 
-function onMove(e: MouseEvent): void {
+/** 鼠标位置 → 最近的数据点下标（越界返回 -1） */
+function indexAt(e: MouseEvent): number {
   const rect = (e.currentTarget as SVGElement).getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const inner = width.value - padL - padR
-  const step = props.labels.length > 1 ? inner / (props.labels.length - 1) : inner
-  const i = Math.round((x - padL) / step)
-  hoverIndex.value = i >= 0 && i < props.labels.length ? i : -1
+  const i = Math.round((e.clientX - rect.left - padL) / Math.max(stepX.value, 1))
+  return i >= 0 && i < props.labels.length ? i : -1
+}
+
+function onMove(e: MouseEvent): void {
+  hoverIndex.value = indexAt(e)
+}
+
+/** 点选：只在 pickable 时上报，调用方用 label 原值做「锁定某个月」 */
+function onClick(e: MouseEvent): void {
+  if (!props.pickable) return
+  const i = indexAt(e)
+  if (i >= 0) emit('pick', props.labels[i])
 }
 </script>
 
@@ -243,6 +301,31 @@ function onMove(e: MouseEvent): void {
 .hover-line {
   stroke: var(--el-border-color);
   stroke-dasharray: 3 3;
+}
+
+/* 锁定月份：高亮带（底）+ 竖向虚线 + 实心点，三重提示保证一眼看到 */
+.active-band {
+  fill: var(--el-color-primary);
+  fill-opacity: 0.1;
+  pointer-events: none;
+}
+
+.active-line {
+  stroke: var(--el-color-primary);
+  stroke-opacity: 0.5;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+
+.active-dot {
+  fill: var(--el-color-primary);
+  stroke: var(--el-bg-color);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.line-chart.pickable svg {
+  cursor: pointer;
 }
 
 /* 序列配色：与 BarChart 的 paid/refunded 色一致，更多序列顺延 Element Plus 色板 */

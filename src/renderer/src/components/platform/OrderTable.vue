@@ -1,27 +1,45 @@
 <template>
   <div class="order-table" v-loading="loading" element-loading-text="正在加载订单，请稍候…">
     <!-- 虚拟滚动表格（el-table-v2）：万行级也只渲染可视区，切换平台不再卡顿 -->
-    <el-auto-resizer v-if="orders.length">
-      <template #default="{ height, width }">
-        <el-table-v2
-          :columns="v2Columns"
-          :data="displayRows"
-          :width="width"
-          :height="height"
-          row-key="id"
-          fixed
-          :row-height="36"
-          :header-height="36"
-          :sort-state="v2SortState"
-          :header-class="headerClass"
-          @column-sort="v2OnColumnSort"
-        />
-      </template>
-    </el-auto-resizer>
+    <div v-if="orders.length" class="table-area">
+      <el-auto-resizer>
+        <template #default="{ height, width }">
+          <el-table-v2
+            ref="tableV2Ref"
+            :columns="v2Columns"
+            :data="displayRows"
+            :width="width"
+            :height="height"
+            row-key="id"
+            fixed
+            :row-height="36"
+            :header-height="36"
+            :sort-state="v2SortState"
+            :header-class="headerClass"
+            @column-sort="v2OnColumnSort"
+          />
+        </template>
+      </el-auto-resizer>
+    </div>
     <!-- 空表：除了文案，允许调用方塞一个动作（筛选无结果时的「清空筛选」） -->
     <el-empty v-else :description="emptyText" :image-size="70">
       <slot name="empty-extra" />
     </el-empty>
+
+    <!-- 分页条：固定在表格下方，不随表格滚动 -->
+    <footer v-if="orders.length" class="table-foot">
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :page-sizes="PAGE_SIZES"
+        :total="orders.length"
+        layout="total, sizes, prev, pager, next, jumper"
+        background
+        size="small"
+        @current-change="onPageChange"
+        @size-change="onSizeChange"
+      />
+    </footer>
   </div>
 </template>
 
@@ -71,15 +89,21 @@ function toggleRow(id: string): void {
   selectedIds.value = next
 }
 
+const pageRowIds = computed(() => displayRows.value.map((r) => r.id))
 const allSelected = computed(
-  () => props.orders.length > 0 && selectedIds.value.size === props.orders.length
+  () => pageRowIds.value.length > 0 && pageRowIds.value.every((id) => selectedIds.value.has(id))
 )
-const someSelected = computed(() => selectedIds.value.size > 0)
+const someSelected = computed(() => pageRowIds.value.some((id) => selectedIds.value.has(id)))
 
+/** 表头勾选框只管当前页；跨页已选的不会因此被清掉（导出仍按全部已选） */
 function toggleAll(): void {
-  selectedIds.value = allSelected.value
-    ? new Set()
-    : new Set(props.orders.map((o, i) => keyOf(o, i)))
+  const next = new Set(selectedIds.value)
+  if (allSelected.value) {
+    for (const id of pageRowIds.value) next.delete(id)
+  } else {
+    for (const id of pageRowIds.value) next.add(id)
+  }
+  selectedIds.value = next
 }
 
 watch(selectedIds, () => {
@@ -110,7 +134,7 @@ function onColumnSort({ key, order }: { key: string; order: SortOrder }): void {
 }
 
 /** 排序 + 包装 id（v2 需要 row-key 字段；选择/渲染都基于包装行） */
-const displayRows = computed(() => {
+const sortedRows = computed(() => {
   const list = props.orders.map((o, i) => ({ ...o, id: keyOf(o, i) }))
   const { key, order } = sortState.value
   if (key && order) {
@@ -119,6 +143,50 @@ const displayRows = computed(() => {
   }
   return list
 })
+
+// ---------------------------------------------------------------------------
+// 分页（2026-11-11）
+//
+// 虚拟表本身画万行也不卡，但「第几页 / 共多少条」是查旧单时最自然的定位方式，
+// 老版本用「再显示 100 单」往上堆，翻到第 800 行就找不着北了。
+// 排序在**整表**上做，分页只切窗口 —— 否则每页内部各自排序，翻页结果会错乱。
+// ---------------------------------------------------------------------------
+const PAGE_SIZES = [50, 100, 200, 500]
+const DEFAULT_PAGE_SIZE = 100
+const page = ref(1)
+const pageSize = ref(DEFAULT_PAGE_SIZE)
+const tableV2Ref = ref<{ scrollTo?: (p: { scrollTop?: number }) => void } | null>(null)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(props.orders.length / pageSize.value)))
+
+const displayRows = computed(() => {
+  const all = sortedRows.value
+  if (all.length <= pageSize.value) return all
+  const start = (page.value - 1) * pageSize.value
+  return all.slice(start, start + pageSize.value)
+})
+
+/** 换平台 / 改筛选 / 进新单 → 回到第 1 页（用户看的永远是「最新的那批」） */
+watch(
+  () => props.orders,
+  () => {
+    page.value = 1
+  }
+)
+
+/** 数据变少（比如筛选收窄）时把页码夹回有效范围，否则会停在一张空页上 */
+watch(totalPages, (n) => {
+  if (page.value > n) page.value = n
+})
+
+function onPageChange(): void {
+  // 换页后滚回顶部：虚拟表会沿用上一页的 scrollTop，不重置看起来像「没翻页」
+  tableV2Ref.value?.scrollTo?.({ scrollTop: 0 })
+}
+
+function onSizeChange(): void {
+  page.value = 1
+}
 
 function moneyCell(v: unknown): string {
   const s = String(v ?? '').trim()
@@ -292,6 +360,24 @@ const headerClass = 'order-v2-header'
 <style scoped>
 .order-table {
   height: 100%;
+  /* 表格吃满剩余高度，分页条固定在底部 */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.table-area {
+  flex: 1;
+  min-height: 0;
+}
+
+.table-foot {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 4px 0;
+  margin-top: 6px;
+  border-top: 1px solid var(--el-border-color-lighter);
 }
 
 /* v2 单元格默认不省略：统一加省略号（cellRenderer 里带 title 原文） */

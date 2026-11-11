@@ -47,3 +47,4 @@ testdata/**/*.real.*
 
 # 本地工单与逆向分析文档：整目录不入库（README 截图已移至 assets/screenshots/）
 /docs/
+.tmp-dist/

@@ -25,9 +25,15 @@ import { withPageRetry } from './page-retry'
 import { debug, error, info } from '../logging/logger'
 import { fetchTaobaoOrdersByApi, taobaoApiRpc, TaobaoSessionError } from './taobao-api-fetch'
 import { fetchTaobaoAsyncOrders, taobaoAsyncUrl } from './taobao-page-fetch'
+import { TAOBAO_HOME_URL } from './taobao'
+import {
+  decodeResponseText,
+  fetchTaobaoAsyncPageViaHost,
+  parseTaobaoAsyncResponse
+} from './taobao-async-host'
 import { fetchPddOrdersViaApi } from './pdd-api-fetch'
 import { fetchJdOrdersViaApi, JdApiLoginRequiredError } from './jd-api-fetch'
-import { sessionCookieString } from './session-http'
+import { cookieValue, sessionCookieString } from './session-http'
 import { openHiddenHost } from './host-window'
 import type { CaptureEngine } from './capture-engine'
 import type { CaptureReport, FetchPlatform, OrdersFetchEvent } from '../../shared/types'
@@ -43,6 +49,9 @@ class FetchCancelledError extends Error {
     this.name = 'FetchCancelledError'
   }
 }
+
+/** 淘宝 mtop 鉴权必需项：必须排在 Cookie 头最前，超长被截断时先丢的是末尾 */
+const TAOBAO_AUTH_COOKIES = ['_m_h5_tk', '_m_h5_tk_enc', 'cookie2', 'unb', '_tb_token_']
 
 /** 静默续期用的通用 Chrome UA（与隐藏宿主窗口一致） */
 const RENEW_UA =
@@ -251,168 +260,200 @@ export function setupOrdersFetchIpc({ getMainWindow, engine, getSession }: Fetch
           return { ok: true }
         }
 
-        // ---- 淘宝：mtop h5 直连（本地签名），协议树响应复用 taobao.ts 解析 ----
+        // ---- 淘宝：隐藏页预热 + mtop 直连 + 网页版外卖补抓（2026-11-11 改造） ----
         if (platform === 'taobao') {
-          const runOnce = async (): Promise<{ pages: number; orders: number }> => {
-            const cookieString = await sessionCookieString(getSession('taobao'), 'taobao')
-            if (!cookieString) {
-              throw new Error('淘宝未登录（分区里没有 Cookie），请先扫码登录')
-            }
-            const { rpc } = taobaoApiRpc(cookieString)
-            let totalOrders = 0
-            let sawAllKnown = false
-            return await fetchTaobaoOrdersByApi(
-              rpc,
-              { maxPages: 200, delayMs: 600 },
-              {
-                cancelCheck,
-                onResponse: (json) => {
-                  const fresh = ingest(
-                    json,
-                    'https://h5api.m.taobao.com/h5/mtop.taobao.order.queryboughtlistV2/1.0/',
-                    'xhr',
-                    'POST',
-                    knownOrderIds
-                  )
-                  sawAllKnown = knownOrderIds !== undefined && fresh === 0
-                },
-                shouldStop: () => sawAllKnown,
-                onProgress: (page, info) => {
-                  totalOrders += info.shopCount
-                  emit({
-                    platform,
-                    phase: 'progress',
-                    pages: page,
-                    orders: totalOrders,
-                    message: '正在逐页拉取全部订单',
-                    detail: `第 ${page} 页 · 本页 ${info.shopCount} 单`
-                  })
-                },
-                sleep: async (ms) => {
-                  cancelCheck()
-                  await sleep(ms)
-                }
-              }
-            )
-          }
-          let result: { pages: number; orders: number }
+          // 整个淘宝流程共用一个隐藏页：
+          //   ① 预热 Cookie —— mtop 要新鲜的 cookie2/_tb_token_，纯接口调用不会续期
+          //   ② 当网页版接口的宿主 —— 裸 fetch 会被 rgv587 判成机器流量（实测）
+          const tbHost = await openHiddenHost({
+            partition: 'persist:platform-taobao',
+            url: TAOBAO_HOME_URL,
+            userAgent: RENEW_UA,
+            openLabel: '打开淘宝订单页'
+          }).catch(() => null)
           try {
-            result = await runOnce()
-          } catch (e) {
-            // 会话短命（session2/sgcookie 过期但 unb 还在）：开一次隐藏淘宝页让
-            // SSO 自己刷新会话，然后重试一次 —— 别让用户为可自动续期的失效重扫
-            if (e instanceof TaobaoSessionError && !cancelFlags.has('taobao')) {
-              emit({ platform, phase: 'progress', message: '登录态过期，正在后台静默续期…' })
-              const ok = await renewSessionViaPage(
-                'persist:platform-taobao',
-                'https://www.taobao.com',
-                '续期淘宝登录态'
+            const runOnce = async (): Promise<{ pages: number; orders: number }> => {
+              const tbSess = getSession('taobao')
+              const cookieString = await sessionCookieString(tbSess, 'taobao', TAOBAO_AUTH_COOKIES)
+              // 诊断：Cookie 头过长/缺项是 mtop 判会话失效的常见原因，先把事实记下来
+              info('fetch:taobao', 'mtop Cookie 串', {
+                bytes: cookieString.length,
+                count: cookieString.split('; ').length,
+                hasToken: cookieString.includes('_m_h5_tk='),
+                hasCookie2: cookieString.includes('cookie2='),
+                hasUnb: cookieString.includes('unb='),
+                head: cookieString.slice(0, 24).replace(/=[^;]+/g, '=***')
+              })
+              if (!cookieString) {
+                throw new Error('淘宝未登录（分区里没有 Cookie），请先扫码登录')
+              }
+              const { rpc } = taobaoApiRpc(cookieString)
+              let totalOrders = 0
+              let sawAllKnown = false
+              return await fetchTaobaoOrdersByApi(
+                rpc,
+                { maxPages: 200, delayMs: 600 },
+                {
+                  cancelCheck,
+                  onResponse: (json) => {
+                    const fresh = ingest(
+                      json,
+                      'https://h5api.m.taobao.com/h5/mtop.taobao.order.queryboughtlistV2/1.0/',
+                      'xhr',
+                      'POST',
+                      knownOrderIds
+                    )
+                    sawAllKnown = knownOrderIds !== undefined && fresh === 0
+                  },
+                  shouldStop: () => sawAllKnown,
+                  onProgress: (page, info) => {
+                    totalOrders += info.shopCount
+                    emit({
+                      platform,
+                      phase: 'progress',
+                      pages: page,
+                      orders: totalOrders,
+                      message: '正在逐页拉取全部订单',
+                      detail: `第 ${page} 页 · 本页 ${info.shopCount} 单`
+                    })
+                  },
+                  sleep: async (ms) => {
+                    cancelCheck()
+                    await sleep(ms)
+                  }
+                }
               )
-              if (!ok) throw e
-              result = await runOnce()
-            } else {
-              throw e
             }
-          }
-          /**
-           * 网页版订单补抓（2026-11-02）：mtop 协议树里**没有外卖/本地生活单**，
-           * 也没有 bizType —— 淘宝外卖栏永远是 0 单。网页版 asyncBought 才带
-           * `extra.bizType`（5000=外卖）。补抓失败只提示，不推翻已抓到的接口订单。
-           */
-          let webPages = 0
-          let webOrders = 0
-          let webOrdersOnPage = 0
-          try {
-            emit({
-              platform,
-              phase: 'progress',
-              pages: result.pages,
-              orders: result.orders,
-              message: '正在补抓网页版订单（含外卖）…'
-            })
-            const taobaoSession = getSession('taobao')
-            const web = await fetchTaobaoAsyncOrders(
-              {
-                page: async (n) => {
-                  const res = await taobaoSession.fetch(taobaoAsyncUrl(n), {
-                    // 分区 Cookie 由 session 自动带上；显式 include 避免默认 same-origin 语义丢 Cookie
-                    credentials: 'include',
-                    headers: {
-                      referer: 'https://buyertrade.taobao.com/trade/itemlist/list_bought_items.htm'
-                    }
+            let result: { pages: number; orders: number }
+            try {
+              result = await runOnce()
+            } catch (e) {
+              // 会话短命（session2/sgcookie 过期但 unb 还在）：开一次隐藏淘宝页让
+              // SSO 自己刷新会话，然后重试一次 —— 别让用户为可自动续期的失效重扫
+              if (e instanceof TaobaoSessionError && !cancelFlags.has('taobao')) {
+                /**
+                 * 诊断（2026-11-11）：宿主页是同一份 Cookie 在真浏览器环境里的样子。
+                 * 它还认得出登录态 → Cookie 有效，问题在「主进程拼头直连」这条路；
+                 * 它自己都跳到登录页 → 服务端会话真的作废，只能重扫。
+                 * 这两种结论对应的修法完全不同，不能靠猜。
+                 */
+                if (tbHost) {
+                  const title = await tbHost
+                    .evalJs<string>('document.title', 4000, '读取淘宝页标题')
+                    .catch(() => '')
+                  info('fetch:taobao', '宿主页登录态', {
+                    title: String(title).slice(0, 50),
+                    href: tbHost.currentUrl().slice(0, 90)
                   })
-                  if (!res.ok) throw new Error(`网页版订单接口 HTTP ${res.status}`)
-                  const text = await res.text()
-                  // 登录态失效时会被重定向到登录页（HTML），给出可读原因
-                  let json: { mainOrders?: unknown; ret?: unknown }
-                  try {
-                    json = JSON.parse(text) as { mainOrders?: unknown; ret?: unknown }
-                  } catch {
-                    throw new Error('网页版订单接口返回的不是 JSON（登录态可能已失效）')
-                  }
-                  // 风控/会话失效时返回的不是订单：可能带 ret，也可能是 rgv587_flag + 登录跳转 URL
-                  if (!Array.isArray(json.mainOrders)) {
-                    if (/rgv587|login\.taobao\.com/i.test(text)) {
-                      throw new Error('淘宝网页版订单接口要求重新登录（返回了登录跳转/人机验证）')
-                    }
-                    const ret = Array.isArray(json.ret) ? json.ret.join(';') : String(json.ret ?? '')
-                    throw new Error(ret || '网页版订单接口结构异常（缺少 mainOrders）')
-                  }
-                  return json as unknown
                 }
-              },
-              { maxPages: 20, delayMs: 400 },
-              {
-                cancelCheck,
-                onPage: (body, page) => {
-                  webOrdersOnPage =
-                    ingest(body, taobaoAsyncUrl(page), 'xhr', 'GET', knownOrderIds) ?? 0
-                  webOrders += webOrdersOnPage
-                },
-                // 增量：这一页全是本地已知单 → 后面的页只会更旧
-                shouldStop: () => knownOrderIds !== undefined && webOrdersOnPage === 0,
-                onProgress: (page, count) => {
-                  emit({
-                    platform,
-                    phase: 'progress',
-                    pages: result.pages + page,
-                    orders: result.orders + webOrders,
-                    message: '正在补抓网页版订单（含外卖）',
-                    detail: `第 ${page} 页 · 本页 ${count} 单`
-                  })
-                },
-                sleep: async (ms) => {
-                  cancelCheck()
-                  await sleep(ms)
-                }
+                emit({ platform, phase: 'progress', message: '登录态过期，正在后台静默续期…' })
+                const ok = await renewSessionViaPage(
+                  'persist:platform-taobao',
+                  'https://www.taobao.com',
+                  '续期淘宝登录态'
+                )
+                if (!ok) throw e
+                result = await runOnce()
+              } else {
+                throw e
               }
-            )
-            webPages = web.pages
-            if (web.pages) {
+            }
+            /**
+             * 网页版订单补抓（2026-11-02 引入，2026-11-11 起用途改为「补齐漏单」）：
+             * mtop 协议树会漏掉少量网页版才有的订单（实测 416 vs 421）。
+             * 外卖分栏已下线，这条通道不再承担 bizType 归类，只用来把订单抓全。
+             * 补抓失败只提示，不推翻已抓到的接口订单。
+             */
+            let webPages = 0
+            let webOrders = 0
+            let webOrdersOnPage = 0
+            try {
               emit({
                 platform,
                 phase: 'progress',
-                pages: result.pages + webPages,
-                orders: result.orders + webOrders,
-                message: `网页版补抓完成：${web.pages} 页 / ${web.orders} 单`
+                pages: result.pages,
+                orders: result.orders,
+                message: '正在补抓网页版订单（补齐接口漏掉的单）…'
+              })
+              // _tb_token_ 可能是 httpOnly（页面 JS 读不到），从分区 Cookie 取一份兜底
+              const tbToken = cookieValue(
+                await sessionCookieString(getSession('taobao'), 'taobao', TAOBAO_AUTH_COOKIES),
+                '_tb_token_'
+              )
+              const web = await fetchTaobaoAsyncOrders(
+                {
+                  // 优先在隐藏页里发（指纹 / Cookie / _tb_token_ 全部正确）；
+                  // 宿主打不开才退回主进程裸请求 —— 那条路基本必被 rgv587 拦，只是别让整轮抓取白跑
+                  page: async (n) => {
+                    if (tbHost) return (await fetchTaobaoAsyncPageViaHost(tbHost, n, tbToken)) as unknown
+                    const res = await getSession('taobao').fetch(taobaoAsyncUrl(n), {
+                      credentials: 'include',
+                      headers: {
+                        referer: 'https://buyertrade.taobao.com/trade/itemlist/list_bought_items.htm'
+                      }
+                    })
+                    if (!res.ok) throw new Error(`网页版订单接口 HTTP ${res.status}`)
+                    // 与宿主路径同款编码探测：这条退化路径同样可能拿到 GBK 分片
+                    return parseTaobaoAsyncResponse(
+                      decodeResponseText(await res.arrayBuffer()).text
+                    ) as unknown
+                  }
+                },
+                { maxPages: 20, delayMs: 400 },
+                {
+                  cancelCheck,
+                  onPage: (body, page) => {
+                    webOrdersOnPage =
+                      ingest(body, taobaoAsyncUrl(page), 'xhr', 'GET', knownOrderIds) ?? 0
+                    webOrders += webOrdersOnPage
+                  },
+                  // 增量：这一页全是本地已知单 → 后面的页只会更旧
+                  shouldStop: () => knownOrderIds !== undefined && webOrdersOnPage === 0,
+                  onProgress: (page, count) => {
+                    emit({
+                      platform,
+                      phase: 'progress',
+                      pages: result.pages + page,
+                      orders: result.orders + webOrders,
+                      message: '正在补抓网页版订单',
+                      detail: `第 ${page} 页 · 本页 ${count} 单`
+                    })
+                  },
+                  sleep: async (ms) => {
+                    cancelCheck()
+                    await sleep(ms)
+                  }
+                }
+              )
+              webPages = web.pages
+              if (web.pages) {
+                emit({
+                  platform,
+                  phase: 'progress',
+                  pages: result.pages + webPages,
+                  orders: result.orders + webOrders,
+                  message: `网页版补抓完成：${web.pages} 页 / ${web.orders} 单`
+                })
+              }
+            } catch (e) {
+              if (cancelFlags.has('taobao')) throw e
+              emit({
+                platform,
+                phase: 'progress',
+                message: `网页版订单补抓失败（可能漏掉部分网页版订单）：${e instanceof Error ? e.message : String(e)}`
               })
             }
-          } catch (e) {
-            if (cancelFlags.has('taobao')) throw e
             emit({
               platform,
-              phase: 'progress',
-              message: `网页版订单补抓失败（外卖单可能缺失）：${e instanceof Error ? e.message : String(e)}`
+              phase: 'completed',
+              ok: true,
+              pages: result.pages + webPages,
+              orders: result.orders + webOrders
             })
+            return { ok: true }
+          } finally {
+            tbHost?.destroy()
           }
-          emit({
-            platform,
-            phase: 'completed',
-            ok: true,
-            pages: result.pages + webPages,
-            orders: result.orders + webOrders
-          })
-          return { ok: true }
         }
 
         // ---- 京东：隐藏页签名宿主 + pcorder_center_list 接口翻页 ----

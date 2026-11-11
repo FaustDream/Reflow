@@ -9,12 +9,19 @@
         :title="tipOf(it)"
         @click="emit('pick', it.label)"
       >
-        <span v-if="showValue" class="bar-value">{{ compactOf(totalValue(it)) }}</span>
         <div class="bar-track">
           <div class="bar-stack" :style="{ height: percentOf(it) }">
             <div class="bar-seg refunded" :style="{ height: refundHeightOf(it) }" />
             <div class="bar-seg paid" />
           </div>
+          <!-- 数值贴在柱顶，而不是整列顶端：两者相差一截时读数会串行 -->
+          <span
+            v-if="showValue && totalValue(it) > 0"
+            class="bar-value"
+            :style="{ bottom: percentOf(it) }"
+          >
+            {{ compactOf(totalValue(it)) }}
+          </span>
         </div>
         <span class="bar-label">{{ it.label }}</span>
       </div>
@@ -119,7 +126,8 @@ function tipOf(item: BarItem): string {
   display: flex;
   align-items: flex-end;
   gap: 4px;
-  padding: 4px 2px 0;
+  /* 顶部留白：柱顶数值最多占 12px，否则满高的柱子会把数字顶出绘图区 */
+  padding: 13px 2px 0;
 }
 
 .bar-col {
@@ -140,14 +148,20 @@ function tipOf(item: BarItem): string {
 }
 
 .bar-value {
-  flex: none;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 3px;
   font-size: 10px;
   line-height: 12px;
   color: var(--el-text-color-secondary);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .bar-track {
+  position: relative;
   flex: 1;
   width: 100%;
   min-height: 0;

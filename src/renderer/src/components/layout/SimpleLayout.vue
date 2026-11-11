@@ -13,11 +13,9 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="history">导出记录</el-dropdown-item>
-              <el-dropdown-item command="import" divided>导入订单文件…</el-dropdown-item>
-              <el-dropdown-item command="mitm">抓取通道（MITM）</el-dropdown-item>
+              <el-dropdown-item command="logs">运行日志</el-dropdown-item>
+              <el-dropdown-item command="mitm" divided>抓取通道（MITM）</el-dropdown-item>
               <el-dropdown-item command="platforms">显示的平台</el-dropdown-item>
-              <el-dropdown-item command="capture-log">捕获日志</el-dropdown-item>
-              <el-dropdown-item command="diagnostics">诊断信息</el-dropdown-item>
               <el-dropdown-item command="clear" divided>清空数据</el-dropdown-item>
               <el-dropdown-item command="about" divided>关于</el-dropdown-item>
             </el-dropdown-menu>
@@ -123,19 +121,6 @@
             </div>
           </template>
 
-          <!-- 运行日志：系统级日志（抓取/登录/导出/缓存），出问题先看这里 -->
-          <div class="list-divider" />
-          <div
-            class="platform-item overview-item"
-            :class="{ active: isLogs }"
-            role="button"
-            tabindex="0"
-            @click="selectPlatform(LOGS_ID)"
-            @keydown.enter="selectPlatform(LOGS_ID)"
-          >
-            <el-icon class="overview-icon"><Logs /></el-icon>
-            <span class="platform-name">运行日志</span>
-          </div>
         </div>
       </el-aside>
 
@@ -145,19 +130,9 @@
         <OverviewPane v-if="isOverview" :platform-ids="visiblePlatformIds" />
         <TrendsPane v-else-if="isTrends" :platform-ids="visiblePlatformIds" />
         <ComparePane v-else-if="isCompare" :platform-ids="visiblePlatformIds" />
-        <LogPane v-else-if="isLogs" />
         <template v-else>
         <div class="content-head">
           <span class="content-title">{{ active?.displayName ?? '—' }}</span>
-          <!--
-            网购 / 外卖 分栏（淘宝、京东）：
-            外卖单本来就在同一份订单里，只是业务线不同 —— 放在平台页内当标签页，
-            不再从侧栏拆一条伪平台（`taobao-local` / `jd-local`）出来。
-          -->
-          <el-radio-group v-if="hasBizTabs" v-model="bizTab" size="small" class="biz-tabs">
-            <el-radio-button value="shopping">网购 {{ bizCounts.shopping }}</el-radio-button>
-            <el-radio-button value="local">外卖 {{ bizCounts.local }}</el-radio-button>
-          </el-radio-group>
           <!--
             登录态 + 登录入口：一律二维码弹窗（2026-11-01 起「打开页面」整体下线）。
           -->
@@ -232,7 +207,7 @@
             :disabled="!filteredOrders.length"
             @click="openExport('current')"
           >
-            导出{{ hasBizTabs ? (bizTab === 'local' ? '外卖' : '网购') : '本平台' }}（{{ filteredOrders.length }}）
+            导出本平台（{{ filteredOrders.length }}）
           </el-button>
         </div>
 
@@ -351,7 +326,7 @@
 
         <OrderTable
           ref="tableRef"
-          :orders="tableRows"
+          :orders="filteredOrders"
           :loading="false"
           :selectable="true"
           :empty-text="emptyText"
@@ -359,26 +334,8 @@
         >
           <template #empty-extra>
             <el-button v-if="hasFilter" size="small" @click="resetFilters">清空筛选</el-button>
-            <!-- 外卖页签空的时候，把「去抓取」放在眼前：多数人不知道外卖要跟着抓一次 -->
-            <el-button
-              v-else-if="hasBizTabs && bizTab === 'local' && fetchable"
-              size="small"
-              type="primary"
-              :disabled="captureRunning"
-              @click="startAutoCapture"
-            >
-              {{ captureRunning ? '抓取中…' : '抓取订单' }}
-            </el-button>
           </template>
         </OrderTable>
-        <!-- 分块提示：表格只画前 N 行保证切换流畅；导出/合计/统计始终按全量 -->
-        <div v-if="tableTruncated" class="table-more">
-          <span class="table-more-hint">
-            已显示前 {{ tableRows.length }} 单，共 {{ filteredOrders.length }} 单（导出与合计仍按全部）
-          </span>
-          <el-button size="small" @click="showMoreRows(false)">再显示 100 单</el-button>
-          <el-button size="small" text @click="showMoreRows(true)">显示全部</el-button>
-        </div>
         </template>
       </el-main>
     </el-container>
@@ -429,46 +386,11 @@
     </el-dialog>
 
     <!--
-      捕获日志：把「没数据」变成可诊断的事实 ——
-      到底是没捕获到请求、还是没匹配上平台规则、还是匹配了但解析失败。
+      运行日志（2026-11-11 从侧栏整页收进「工具」菜单）：
+      出问题时才会打开，不该常驻占一个导航位置。
     -->
-    <el-dialog v-model="captureLogVisible" title="捕获日志（最近 150 条）" width="860px">
-      <div class="cap-log-bar">
-        <span class="cap-log-hint">
-          已入库 = 命中平台规则并解析出订单；解析失败 = 命中了但字段不对；无关 = 与订单无关的网页流量
-        </span>
-        <div class="spacer" />
-        <el-button size="small" @click="refreshCaptureLog">刷新</el-button>
-      </div>
-        <el-table
-          :data="captureLog"
-          size="small"
-          height="420"
-          empty-text="还没有捕获记录 — 登录后点「抓取订单」，或开启 MITM 通道"
-        >
-        <el-table-column label="时间" width="86">
-          <template #default="{ row }">{{ clockOf(row.ts) }}</template>
-        </el-table-column>
-        <el-table-column label="结果" width="92">
-          <template #default="{ row }">
-            <el-tag
-              size="small"
-              :type="row.outcome === 'ok' ? 'success' : row.outcome === 'error' ? 'danger' : 'info'"
-            >
-              {{ row.outcome === 'ok' ? '已入库' : row.outcome === 'error' ? '解析失败' : '无关' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="平台" width="80">
-          <template #default="{ row }">{{ row.platform || '—' }}</template>
-        </el-table-column>
-        <el-table-column label="说明" width="190" prop="detail" show-overflow-tooltip />
-        <el-table-column label="URL" min-width="300">
-          <template #default="{ row }">
-            <span class="cap-log-url">{{ row.url }}</span>
-          </template>
-        </el-table-column>
-      </el-table>
+    <el-dialog v-model="logsVisible" title="运行日志" width="1020px" top="6vh" destroy-on-close>
+      <div class="logs-dialog-body"><LogPane /></div>
     </el-dialog>
 
     <ExportHistoryDialog v-model="historyVisible" />
@@ -486,7 +408,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ArrowDown, ColumnOrder, DataAnalysis, Loading, Logs, Refresh, Search } from '../icons'
+import { ArrowDown, ColumnOrder, DataAnalysis, Loading, Refresh, Search } from '../icons'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import LoginDialog from '../platform/LoginDialog.vue'
 import OrderTable from '../platform/OrderTable.vue'
@@ -503,7 +425,7 @@ import { useOrdersStore } from '@renderer/stores/orders'
 import { usePlatformsStore } from '@renderer/stores/platforms'
 import type { AdapterSummary, FetchPlatform, Order } from '@shared/types'
 import { HIDDEN_PLATFORMS } from '@shared/platform-visibility'
-import { bizLineOf, orderStateOf, orderStateClassOf, stateMoneyOf, type OrderStateClass } from '@renderer/utils/order-stats'
+import { orderStateOf, orderStateClassOf, stateMoneyOf, type OrderStateClass } from '@renderer/utils/order-stats'
 
 defineProps<{
   /**
@@ -527,39 +449,13 @@ const activeId = ref('')
  */
 const OVERVIEW_ID = '__overview__'
 /**
- * 运行日志页的伪 id（2026-11-02）。和 OVERVIEW_ID 一样用 `__` 包裹，
- * 绝不会命中真实适配器 —— 否则登录/抓取会按这个 id 去找平台。
- */
-const LOGS_ID = '__logs__'
-/**
  * 趋势分析 / 平台对比页的伪 id（2026-11-08）。同样 `__` 包裹不命中真实适配器。
  */
 const TRENDS_ID = '__trends__'
 const COMPARE_ID = '__compare__'
 const isOverview = computed(() => activeId.value === OVERVIEW_ID)
-const isLogs = computed(() => activeId.value === LOGS_ID)
 const isTrends = computed(() => activeId.value === TRENDS_ID)
 const isCompare = computed(() => activeId.value === COMPARE_ID)
-
-/**
- * 平台页内的「网购 / 外卖」分栏（2026-11-02）。
- *
- * 外卖单本来就在淘宝/京东的同一份订单里，只是业务线不同 —— 之前拆成
- * `taobao-local` / `jd-local` 两个伪平台放到侧栏，既多两行（还经常 0 单），
- * 又和真实的平台登录/抓取语义打架。现在收回平台页内当标签页。
- */
-type BizTab = 'shopping' | 'local'
-const bizTab = ref<BizTab>('shopping')
-/** 只有这两个平台的订单里会混着外卖/本地生活单 */
-const BIZ_TAB_PLATFORMS = new Set(['taobao', 'jd'])
-const hasBizTabs = computed(() => BIZ_TAB_PLATFORMS.has(activeId.value))
-/** 当前平台两条业务线各自的单量（标签页上直接显示） */
-const bizCounts = computed(() => {
-  const list = ordersStore.byPlatform[activeId.value] ?? []
-  let local = 0
-  for (const o of list) if (bizLineOf(o) === 'local') local += 1
-  return { shopping: list.length - local, local }
-})
 
 const loginVisible = ref(false)
 /** 列顺序面板（工单 043）：全局一套顺序，与当前平台无关 */
@@ -595,35 +491,9 @@ const searchRef = ref<{ focus: () => void } | null>(null)
 const exportVisible = ref(false)
 const exportScope = ref<'current' | 'selected'>('current')
 const historyVisible = ref(false)
+const logsVisible = ref(false)
 const aboutVisible = ref(false)
 const mitmVisible = ref(false)
-
-/** 捕获日志：最近捕获的请求与结果（诊断「为什么没数据」） */
-interface RecentCaptureRow {
-  url: string
-  kind: string
-  status: number
-  ts: number
-  platform: string | null
-  outcome: 'ok' | 'error' | 'unmatched'
-  detail: string
-}
-const captureLogVisible = ref(false)
-const captureLog = ref<RecentCaptureRow[]>([])
-
-async function refreshCaptureLog(): Promise<void> {
-  try {
-    captureLog.value = await window.api.getRecentCaptures()
-  } catch (e) {
-    ElMessage.error(`读取捕获日志失败：${e instanceof Error ? e.message : String(e)}`)
-  }
-}
-
-function clockOf(ts: number): string {
-  const d = new Date(ts)
-  const p = (n: number): string => String(n).padStart(2, '0')
-  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
-}
 
 interface PlatformRow extends AdapterSummary {
   count: number
@@ -716,7 +586,7 @@ function cleanupDrag(): void {
   dragOverId.value = ''
 }
 
-/** 侧栏里的平台（外卖不再是独立行，见 bizTab） */
+/** 侧栏里的平台（只列真实适配器；总览/趋势/对比是伪 id，不在此列） */
 const platforms = computed<PlatformRow[]>(() => shoppingRows.value)
 
 /** 可勾选的平台（技术性隐藏的不参与） */
@@ -919,14 +789,11 @@ async function stopCapture(): Promise<void> {
   }
 }
 
-/** 当前平台订单：淘宝/京东按页内「网购 / 外卖」标签页切，其它平台给全量 */
+/** 当前平台订单（外卖分栏已下线，2026-11-11：一份订单不再按业务线切） */
 const currentOrders = computed<Order[]>(() => {
   const id = activeId.value
   if (!id) return []
-  const list = ordersStore.byPlatform[id] ?? []
-  if (!BIZ_TAB_PLATFORMS.has(id)) return list
-  const wantLocal = bizTab.value === 'local'
-  return list.filter((o) => (bizLineOf(o) === 'local') === wantLocal)
+  return ordersStore.byPlatform[id] ?? []
 })
 
 // ---------------------------------------------------------------------------
@@ -1007,17 +874,12 @@ const hasFilter = computed(
 )
 
 // ---------------------------------------------------------------------------
-// 表格分块渲染（2026-11-01）：几百单 × 9 列全量渲染 DOM 是切平台卡顿的主因。
-// 表格只画前 N 行；导出、合计、状态统计仍按 filteredOrders 全量。
+// 表格分页交给 OrderTable 自己做（2026-11-11）
+//
+// 这里原来按 100 行一块往上堆（「再显示 100 单」），翻到几百行之后既定位不到
+// 具体位置、也没有「共多少页」的概念。现在整表直接传下去，由表格内部分页，
+// 导出 / 合计 / 状态统计本来就走 filteredOrders 全量，不受分页影响。
 // ---------------------------------------------------------------------------
-const TABLE_CHUNK = 100
-const visibleCount = ref(TABLE_CHUNK)
-const tableRows = computed(() => filteredOrders.value.slice(0, visibleCount.value))
-const tableTruncated = computed(() => filteredOrders.value.length > tableRows.value.length)
-
-function showMoreRows(all: boolean): void {
-  visibleCount.value = all ? filteredOrders.value.length : visibleCount.value + TABLE_CHUNK
-}
 
 /** 状态下拉：只列当前平台真实出现过的状态（带条数） */
 const statusOptions = computed(() => {
@@ -1048,9 +910,6 @@ const emptyText = computed(() => {
     return hasFilter.value
       ? `没有符合「${filterSummary.value}」的订单`
       : '没有匹配筛选条件的订单 — 试试清空搜索或切回「全部时间」'
-  }
-  if (hasBizTabs.value && bizTab.value === 'local') {
-    return '这个平台还没有外卖/本地生活订单 — 抓取订单时会一并归类到这里'
   }
   return '暂无订单 — 登录后点「抓取订单」，全程后台自动抓取'
 })
@@ -1150,7 +1009,6 @@ watch(
   [activeId, keyword, timeRange, yearFilter, stateClassFilter, statusFilter],
   () => {
     selectedOrders.value = []
-    visibleCount.value = TABLE_CHUNK
     tableRef.value?.clearSelection()
 })
 
@@ -1161,12 +1019,6 @@ watch(
  */
 watch(activeId, () => {
   statusFilter.value = ''
-  bizTab.value = 'shopping'
-})
-
-// 网购/外卖切换也是一条「指令」，出问题时要能对上时间线
-watch(bizTab, (tab) => {
-  uiLog('ui', '切换网购/外卖', { platform: activeId.value, tab })
 })
 
 // ---------------------------------------------------------------------------
@@ -1184,7 +1036,7 @@ function openExport(scope: 'current' | 'selected'): void {
 }
 
 // ---------------------------------------------------------------------------
-// 切换性能计时（2026-11-01）：定位卡顿瓶颈。数字打 console 与诊断信息，
+// 切换性能计时（2026-11-01）：定位卡顿瓶颈，结果只打 console（开 DevTools 看）。
 // 拆两段：数据（过滤/统计重算）+ 渲染（表格 DOM 提交）。
 // ---------------------------------------------------------------------------
 interface SwitchTiming {
@@ -1196,14 +1048,13 @@ interface SwitchTiming {
   rows: number
   at: number
 }
-const switchTimings = ref<SwitchTiming[]>([])
 let switchT0 = 0
 let switchFrom = ''
 let filterEvalMs = 0
 
 function selectPlatform(id: string): void {
   if (activeId.value === id) return
-  uiLog('ui', id === LOGS_ID ? '打开运行日志' : '切换平台', {
+  uiLog('ui', '切换平台', {
     from: activeId.value,
     to: id
   })
@@ -1219,10 +1070,9 @@ function selectPlatform(id: string): void {
         totalMs: Math.round(totalMs),
         dataMs: Math.round(filterEvalMs),
         renderMs: Math.round(totalMs - filterEvalMs),
-        rows: tableRows.value.length,
+        rows: filteredOrders.value.length,
         at: Date.now()
       }
-      switchTimings.value = [timing, ...switchTimings.value].slice(0, 20)
       // eslint-disable-next-line no-console
       console.info(
         `[switch-perf] ${switchFrom} → ${id}: ${timing.totalMs}ms（数据 ${timing.dataMs}ms + 渲染 ${timing.renderMs}ms，${timing.rows} 行）`
@@ -1411,23 +1261,8 @@ async function onToolCommand(cmd: string): Promise<void> {
     historyVisible.value = true
     return
   }
-  if (cmd === 'import') {
-    const platform = activeId.value
-    if (!platform) return
-    const name = active.value?.displayName ?? platform
-    const r = await window.api.importOrdersFile(platform)
-    if (!r.ok) {
-      if (r.message !== '已取消') {
-        ElNotification.error({ title: '导入失败', message: r.message ?? '未知错误' })
-      }
-      return
-    }
-    await ordersStore.reloadCache()
-    ElNotification.success({
-      title: '导入完成',
-      message: `${name}：新增 ${r.imported} 单${r.skipped ? `，跳过 ${r.skipped} 行` : ''}`,
-      duration: 8000
-    })
+  if (cmd === 'logs') {
+    logsVisible.value = true
     return
   }
   if (cmd === 'mitm') {
@@ -1436,15 +1271,6 @@ async function onToolCommand(cmd: string): Promise<void> {
   }
   if (cmd === 'platforms') {
     openPlatformsDialog()
-    return
-  }
-  if (cmd === 'capture-log') {
-    captureLogVisible.value = true
-    void refreshCaptureLog()
-    return
-  }
-  if (cmd === 'diagnostics') {
-    await onDiagnostics()
     return
   }
   if (cmd === 'clear') {
@@ -1456,41 +1282,6 @@ async function onToolCommand(cmd: string): Promise<void> {
     aboutVisible.value = true
     return
   }
-}
-
-/** 工单 025：诊断面板 —— 只读快照 + 一键复制（不含 Cookie / 订单内容） */
-async function onDiagnostics(): Promise<void> {
-  try {
-    const base = (await window.api.getDiagnostics()) as Record<string, unknown>
-    const snapshot = {
-      ...base,
-      renderer: {
-        switchTimings: switchTimings.value.slice(0, 10),
-        inMemory: Object.fromEntries(
-          Object.entries(ordersStore.byPlatform).map(([p, list]) => [p, list.length])
-        ),
-        parseErrors: ordersStore.parseErrors.slice(0, 10).map((e) => ({
-          platformId: e.platformId,
-          message: e.message
-        })),
-        filter: { keyword: keyword.value, timeRange: timeRange.value, status: statusFilter.value }
-      }
-    }
-    const text = JSON.stringify(snapshot, null, 2)
-    await ElMessageBox.alert(
-      `<pre style="max-height:52vh;overflow:auto;font-size:12px;line-height:1.5;text-align:left;white-space:pre-wrap">${escapeHtml(
-        text
-      )}</pre>`,
-      '诊断信息（可全选复制）',
-      { dangerouslyUseHTMLString: true, customClass: 'diag-box' }
-    )
-  } catch (e) {
-    ElMessage.error(`读取诊断信息失败：${e instanceof Error ? e.message : String(e)}`)
-  }
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] as string)
 }
 
 watch(
@@ -1514,6 +1305,13 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* 运行日志弹窗：LogPane 是 flex 布局（flex:1），给个定高容器让它撑满 */
+.logs-dialog-body {
+  height: 64vh;
+  display: flex;
+  min-height: 0;
+}
+
 /* 首屏加载遮罩：盖住整个窗口，读完缓存才撤 */
 .boot-mask {
   position: fixed;
@@ -1798,17 +1596,6 @@ onBeforeUnmount(() => {
   margin-left: 4px;
 }
 
-/*
-  平台页内的「网购 / 外卖」分栏（淘宝、京东）。
-  做成分段按钮而不是大标签：它和筛选栏是两级东西，视觉上不能抢过筛选控件。
-*/
-.biz-tabs :deep(.el-radio-button__inner) {
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
 /* 标题行右侧的统计：右对齐 + 等宽数字，切平台/筛选时不会左右跳 */
 .head-stat {
   flex: none;
@@ -1949,34 +1736,6 @@ onBeforeUnmount(() => {
 }
 
 /* 捕获日志面板 */
-.cap-log-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.cap-log-hint {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-/* 分块提示条：表格只画前 N 行时显示 */
-.table-more {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 4px;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.cap-log-url {
-  font-size: 11px;
-  color: var(--el-text-color-regular);
-  word-break: break-all;
-}
-
 /* 抓取进度条 */
 .capture-bar {
   display: flex;

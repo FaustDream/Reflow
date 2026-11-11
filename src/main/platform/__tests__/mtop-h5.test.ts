@@ -97,6 +97,71 @@ describe('工单 040：mtop h5 请求（注入假 http）', () => {
   })
 })
 
+describe('陈旧 token 导致的会话过期（2026-11-11）', () => {
+  it('会话过期 + 网关换发新 token → 用新 token 重签一次并成功', async () => {
+    const calls: Array<{ url: string; headers: Record<string, string> }> = []
+    const http = async (
+      url: string,
+      options: { headers: Record<string, string> }
+    ): Promise<{ status: number; text: string; setCookie: string[] }> => {
+      calls.push({ url, headers: options.headers })
+      if (calls.length === 1) {
+        return {
+          status: 200,
+          text: JSON.stringify({ ret: ['FAIL_SYS_SESSION_EXPIRED::Session过期'], data: {} }),
+          setCookie: ['_m_h5_tk=bbbbbbbb111111112222222233333333_1762000000; Domain=.taobao.com']
+        }
+      }
+      return {
+        status: 200,
+        text: JSON.stringify({ ret: ['SUCCESS::调用成功'], data: { list: [] } }),
+        setCookie: []
+      }
+    }
+    const result = await mtopH5Request(http, {
+      api: 'mtop.taobao.order.queryboughtlistV2',
+      data: { page: 1 },
+      origin: 'https://buyertrade.taobao.com',
+      referer: 'https://buyertrade.taobao.com/',
+      cookieString: '_m_h5_tk=aaaaaaaa111111112222222233333333_1761000000; cookie2=xyz; unb=123'
+    })
+    expect(calls.length).toBe(2)
+    expect(calls[1].headers.cookie).toContain('_m_h5_tk=bbbbbbbb11111111')
+    expect(result.ret).toEqual(['SUCCESS::调用成功'])
+    expect(result.cookieString).toContain('_m_h5_tk=bbbbbbbb11111111')
+  })
+
+  it('会话真失效：剔除旧 token 重来一轮后仍过期，错误原样上抛（不会无限重试）', async () => {
+    let calls = 0
+    const cookiesSeen: string[] = []
+    const http = async (
+      _url: string,
+      options: { headers: Record<string, string> }
+    ): Promise<{ status: number; text: string; setCookie: string[] }> => {
+      calls += 1
+      cookiesSeen.push(options.headers.cookie)
+      return {
+        status: 200,
+        text: JSON.stringify({ ret: ['FAIL_SYS_SESSION_EXPIRED::Session过期'], data: {} }),
+        setCookie: []
+      }
+    }
+    const result = await mtopH5Request(http, {
+      api: 'mtop.foo',
+      data: {},
+      origin: 'https://x.example',
+      referer: 'https://x.example',
+      cookieString: '_m_h5_tk=aaaaaaaa111111112222222233333333_1761000000; cookie2=xyz'
+    })
+    // 首次 + 剔除 token 后的一轮；第二轮已无 token 可剔，就此收手
+    expect(calls).toBe(2)
+    expect(cookiesSeen[0]).toContain('_m_h5_tk=')
+    expect(cookiesSeen[1]).not.toContain('_m_h5_tk=')
+    expect(cookiesSeen[1]).toContain('cookie2=xyz')
+    expect(result.ret[0]).toMatch(/SESSION_EXPIRED/)
+  })
+})
+
 describe('工单 040：Cookie 串工具', () => {
   it('mergeCookiePairs 同名删除并前置', () => {
     const merged = mergeCookiePairs('a=1; b=2; c=3', ['b=new'])

@@ -26,33 +26,6 @@ export interface CaptureBridgeOptions {
 }
 
 /**
- * 最近捕获摘要（诊断用）。
- *
- * 只记 URL / 结果 / 命中平台，**不含订单内容与 Cookie**。
- * 之前这些信息只发给渲染层一个没人消费的事件通道，出问题时完全看不见
- * —— 用户只能得到「没数据」三个字，无法判断是没捕获到、还是没匹配上、还是解析失败。
- */
-export interface RecentCapture {
-  url: string
-  kind: string
-  status: number
-  ts: number
-  platform: string | null
-  outcome: 'ok' | 'error' | 'unmatched'
-  detail: string
-}
-
-const RECENT_LIMIT = 200
-const recentCaptures: RecentCapture[] = []
-
-function pushRecent(item: RecentCapture): void {
-  recentCaptures.push(item)
-  if (recentCaptures.length > RECENT_LIMIT) {
-    recentCaptures.splice(0, recentCaptures.length - RECENT_LIMIT)
-  }
-}
-
-/**
  * 工单 034：外部捕获来源（MITM 通道）。
  *
  * 代理解密出来的响应走**同一个捕获引擎**（路由 → 解析 → 去重 → 事件），
@@ -172,27 +145,6 @@ export function setupCaptureBridge({ getMainWindow }: CaptureBridgeOptions): voi
     // 工单 005：路由 → 解析 → 去重 → 订单事件
     const outcome = engine.handleReport(payload, webviewId)
 
-    // 诊断缓冲：不管命中与否都留一条，界面「捕获日志」直接读它
-    pushRecent({
-      url: payload.url,
-      kind: payload.kind,
-      status: payload.status ?? 0,
-      ts: Date.now(),
-      platform:
-        outcome.type === 'ok'
-          ? (outcome.event?.platform ?? null)
-          : outcome.type === 'error'
-            ? outcome.error.platformId
-            : null,
-      outcome: outcome.type,
-      detail:
-        outcome.type === 'ok'
-          ? `${outcome.event?.orders.length ?? 0} 单`
-          : outcome.type === 'error'
-            ? outcome.error.message
-            : '未命中任何平台规则'
-    })
-
     if (outcome.type === 'ok') {
       if (outcome.event) {
         // 工单 021：把「当前活动账号」绑定到订单上（account 字段用于导出标注与账号内去重）。
@@ -242,14 +194,10 @@ export function setupCaptureBridge({ getMainWindow }: CaptureBridgeOptions): voi
   // 工单 005：UI 清空时同步重置引擎去重状态
   ipcMain.handle('orders:reset', () => {
     engine.reset()
-    recentCaptures.length = 0
   })
 
   /** 渲染层启动时补一次登录态（启动瞬间的事件会因为窗口未就绪而丢失） */
   ipcMain.handle('platform:login-states', () => getPlatformLoginStates())
-
-  /** 诊断：最近捕获摘要（倒序，最新在前） */
-  ipcMain.handle('capture:recent', () => recentCaptures.slice(-150).reverse())
 
   // 工单 012/013/040：四平台接口型批量抓取（响应复用同一引擎）
   setupOrdersFetchIpc({

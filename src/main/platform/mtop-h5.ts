@@ -86,6 +86,9 @@ export interface MtopH5CallResult {
  * 只写正确拼写会漏掉最常见的那条，导致「令牌过期」被当成普通错误上抛，
  * 用户看到的就是莫名其妙的抓取失败。
  */
+/** 会话过期：只在网关同时换了 token 时才值得重签重试，见 mtopH5Request 尾部 */
+const SESSION_EXPIRED_RET = /FAIL_SYS_SESSION_EXPIRED/i
+
 const TOKEN_ERR =
   /FAIL_SYS_TOKEN_EMPTY|FAIL_SYS_TOKEN_EXPIRED|FAIL_SYS_TOKEN_EXOIRED|FAIL_SYS_TOKEN_ILLEGAL|TOKEN_FORBIDDEN/i
 
@@ -171,6 +174,7 @@ export async function mtopH5Request(
   let ret = retOf(json)
 
   // token 引导：首响应的 set-cookie 一定带新 _m_h5_tk（没有有效 token 时必走这条路）
+  let reissued = false
   if (ret.some((r) => TOKEN_ERR.test(r))) {
     cookie = mergeCookiePairs(cookie, tkPairsFromSetCookie(res.setCookie))
     const token = mtopTokenFromCookie(cookie)
@@ -184,9 +188,46 @@ export async function mtopH5Request(
     res = await call(token, cookie)
     json = safeJson(res.text)
     ret = retOf(json)
+    reissued = true
+  }
+
+  /**
+   * 会话过期但网关同时换了 token（2026-11-11）：
+   *
+   * 抓取报 SESSION_EXPIRED 而界面明明已登录，实测根因是**陈旧的 `_m_h5_tk`**——
+   * 它是持久 Cookie，跨重启一直留着；重新扫码或重启后 `cookie2` 换了新的，
+   * 旧 token 不再与新会话配套，网关就判会话过期。这时网关会在 set-cookie 里
+   * 下发新 `_m_h5_tk`，用它重签一次即可（真失效时不下发新 token，这里不会白跑）。
+   */
+  if (!reissued && ret.some((r) => SESSION_EXPIRED_RET.test(r))) {
+    // 网关自己换了 token 时直接用新的重签一次即可（少一次往返）
+    const pairs = tkPairsFromSetCookie(res.setCookie)
+    const withNew = mergeCookiePairs(cookie, pairs)
+    if (pairs.length && mtopTokenFromCookie(withNew) && withNew !== cookie) {
+      res = await call(mtopTokenFromCookie(withNew), withNew)
+      json = safeJson(res.text)
+      ret = retOf(json)
+      cookie = withNew
+    }
+    // 网关没换 token：说明请求头里那个旧 token 它不认。把 token 剔除后整轮重来
+    // （空 token → 必然触发引导），这样无论重启还是重新扫码换了会话都能自愈。
+    if (ret.some((r) => SESSION_EXPIRED_RET.test(r))) {
+      const stripped = stripMtopToken(cookie)
+      if (stripped !== cookie) {
+        return mtopH5Request(http, { ...options, cookieString: stripped })
+      }
+    }
   }
 
   return { json: json ?? {}, ret, cookieString: cookie }
+}
+
+/** 从 Cookie 串里剔除 mtop 令牌，强制下一次请求重新引导 */
+export function stripMtopToken(cookieString: string): string {
+  return cookieString
+    .split('; ')
+    .filter((p) => p && !/^_m_h5_tk(_enc)?=/.test(p))
+    .join('; ')
 }
 
 /** 从 set-cookie 行数组里抠出 _m_h5_tk / _m_h5_tk_enc 的 name=value 对 */

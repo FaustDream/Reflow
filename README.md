@@ -13,7 +13,7 @@ Local-first order aggregation for Chinese e-commerce accounts. Runs on your mach
 
 <sub>English · [简体中文](README.zh-CN.md)</sub>
 
-<img src="assets/screenshots/01-overview.png" width="880" alt="Reflow overview dashboard: KPIs, yearly spend, platform share, refund rate and a daily heat calendar">
+<img src="assets/screenshots/01-overview.png" width="880" alt="Reflow dashboard: status amount breakdown, spend/reconcile/structure role views and a platform × status matrix">
 
 </div>
 
@@ -48,7 +48,7 @@ Reflow logs in with the QR code you already scan, reads your own orders through 
 |---|---|
 | **Four platforms in one list** | 闲鱼 / 京东 / 淘宝 / 拼多多, merged with a unified order model (19 core columns + platform-specific extras) |
 | **One-click capture** | Log in once by QR code, then `抓取订单` fetches in the background — no paging by hand |
-| **Dashboard** | 5 KPIs + yearly spend, platform share, monthly distribution, refund gauge, daily heat calendar, weekday and status breakdowns — hand-written SVG, no chart library |
+| **Dashboard** | One status band (succeeded / in progress / refunding / refunded / closed) + three role views (spend, reconcile, structure) + a platform × status matrix; state cards, month bars and matrix rows all drive the filters. Hand-written SVG, no chart library |
 | **Trends & comparison** | Time-dimension view and platform-dimension view over the same dataset |
 | **Filter and export** | Filter by year, status, keyword; select rows; export in three shapes with per-platform sheets |
 | **Run log** | Live log view inside the app: level filter, keyword search, open log folder |

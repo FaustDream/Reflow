@@ -204,11 +204,6 @@ const api = {
   cancelFetchOrders: (
     platform: FetchPlatform
   ): Promise<{ ok: boolean }> => ipcRenderer.invoke('orders:cancel-fetch', platform),
-  /** 导入平台官方导出的 xlsx/csv（全量订单），并进本地库 */
-  importOrdersFile: (
-    platform: string
-  ): Promise<{ ok: boolean; imported: number; skipped: number; message?: string }> =>
-    ipcRenderer.invoke('orders:import-file', platform),
   onOrdersFetchEvent: (listener: (payload: OrdersFetchEvent) => void): Unsubscribe =>
     on<OrdersFetchEvent>('orders:fetch-event', listener),
   /** 主进程落盘后通知渲染层重载本地缓存 */
@@ -268,21 +263,6 @@ const api = {
 
   clearAllCache: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('cache:clear-all'),
 
-  /** 工单 025：诊断快照（不含 Cookie / 订单内容） */
-  getDiagnostics: (): Promise<unknown> => ipcRenderer.invoke('diagnostics:snapshot'),
-
-  /** 诊断：最近捕获摘要（URL / 命中平台 / 结果），用于「捕获日志」面板 */
-  getRecentCaptures: (): Promise<
-    Array<{
-      url: string
-      kind: string
-      status: number
-      ts: number
-      platform: string | null
-      outcome: 'ok' | 'error' | 'unmatched'
-      detail: string
-    }>
-  > => ipcRenderer.invoke('capture:recent'),
 
   // ---------------------------------------------------------------------------
   // 工单 021：多账号聚合

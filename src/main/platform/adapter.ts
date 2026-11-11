@@ -63,6 +63,29 @@ export interface LoginDescriptor {
    * 值会做一次 URL 解码 + `\uXXXX` 还原（淘宝的 tracknick 常是 `%5Cu58A8%5Cu8FF9` 这种转义形态）。
    */
   nicknameCookies?: string[]
+  /**
+   * 需要「强制落盘」的登录 Cookie 名。
+   *
+   * Electron 只把带过期时间的 Cookie 写进磁盘，**会话级 Cookie（无 Expires）随进程退出消失**，
+   * 而且不做 session restore。淘宝的登录身份 `unb` 恰好是会话级 —— 每关一次应用就要重新扫码，
+   * 掉线期间的新订单既抓不到也捕获不到，是静默丢单。
+   *
+   * 声明在这里的 Cookie，会在登录成功时被改写成 180 天有效的持久 Cookie
+   * （只改本地过期时间，不动值、不影响服务端校验）。
+   * 其它平台（京东 pinId、闲鱼 unb）本来就是持久的，不需要声明。
+   */
+  persistCookies?: string[]
+
+  /**
+   * 把分区里**所有**会话级 Cookie 都改写为持久（2026-11-11）。
+   *
+   * 只点名几个关键项不够用：淘宝的会话除 `unb`/`cookie2`/`_tb_token_` 外，
+   * 还依赖 `sca`、`tbsa`、`_samesite_flag_` 这些同样无 Expires 的项。少一个，
+   * 重启后宿主页就直接跳登录页（实测），所以整分区一起落盘才完整。
+   *
+   * 会对该分区的全部 Cookie 生效，只对「整个分区就是平台登录态」的平台开启。
+   */
+  persistAllSession?: boolean
 }
 
 /**

@@ -100,9 +100,7 @@ import type { Order } from '@shared/types'
 import {
   buildMonthlyTrend,
   buildOverviewStats,
-  filterByScope,
   groupByPlatform,
-  splitLocalLife
 } from '@renderer/utils/order-stats'
 import LineChart, { type LineSeries } from './LineChart.vue'
 import DonutChart from './DonutChart.vue'
@@ -133,7 +131,7 @@ const groups = computed(() => {
     if (allowed && !allowed.has(id)) continue
     source[id] = list
   }
-  return filterByScope(splitLocalLife(groupByPlatform(source, nameOf)), 'all')
+  return groupByPlatform(source, nameOf)
 })
 
 const stats = computed(() => buildOverviewStats(groups.value, null))

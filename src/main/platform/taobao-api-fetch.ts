@@ -18,6 +18,7 @@ import {
   defaultMtopHttp
 } from './mtop-h5'
 import { withPageRetry } from './page-retry'
+import { info } from '../logging/logger'
 
 export const TAOBAO_MTOP_API = 'mtop.taobao.order.queryboughtlistV2'
 export const TAOBAO_MTOP_ORIGIN = 'https://buyertrade.taobao.com'
@@ -107,8 +108,13 @@ export class TaobaoValidateError extends Error {
 export function taobaoRetError(ret: string[]): Error | null {
   const text = ret.join(';')
   if (/SUCCESS/.test(text)) return null
-  if (SESSION_EXPIRED.test(text)) return new TaobaoSessionError()
+  /**
+   * 风控判定要**先于**会话过期（2026-11-11）：淘宝被人机验证拦下时，
+   * ret 里可能同时夹带 SESSION_EXPIRED 字样，先判会话过期就会把「去过滑块」
+   * 误报成「重新扫码」，用户重扫多少次都没用。
+   */
   if (USER_VALIDATE.test(text)) return new TaobaoValidateError()
+  if (SESSION_EXPIRED.test(text)) return new TaobaoSessionError()
   return new Error(`淘宝接口返回错误：${text.slice(0, 120)}`)
 }
 
@@ -177,7 +183,15 @@ export function taobaoApiRpc(
         })
         cookie = r.cookieString
         const err = taobaoRetError(r.ret)
-        if (err) throw err
+        if (err) {
+          // ret 原文是区分「风控 / 会话失效 / 参数错」的唯一依据，别只留一句结论
+          info('fetch:taobao', 'mtop 返回错误', {
+            page,
+            ret: r.ret.join(';').slice(0, 200),
+            kind: err.name
+          })
+          throw err
+        }
         if (!r.json || Object.keys(r.json).length === 0) {
           throw new Error('淘宝接口返回空响应（可能未登录）')
         }

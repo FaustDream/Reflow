@@ -33,7 +33,13 @@ function sanitize(value: unknown, depth = 0): unknown {
   if (value === null || value === undefined) return value
   if (depth > 4) return '[deep]'
   if (typeof value === 'string') {
-    if (value.length > 500) return `${value.slice(0, 500)}…(${value.length})`
+    if (value.length > 500) {
+      // 与渲染层同款：切点落在代理对中间会写出半个字符，日志里看着像乱码
+      let end = 500
+      const code = value.charCodeAt(end - 1)
+      if (code >= 0xd800 && code <= 0xdbff) end -= 1
+      return `${value.slice(0, end)}…(${value.length})`
+    }
     return value
   }
   if (typeof value === 'number' || typeof value === 'boolean') return value

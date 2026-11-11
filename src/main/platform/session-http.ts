@@ -138,7 +138,9 @@ async function directFetch(
  */
 export async function sessionCookieString(
   sess: Session,
-  domainPart: string
+  domainPart: string,
+  /** 需要排在头部的 Cookie 名（按给定顺序），见下方注释 */
+  prefer: string[] = []
 ): Promise<string> {
   const cookies = await sess.cookies.get({})
   const seen = new Map<string, string>()
@@ -147,7 +149,21 @@ export async function sessionCookieString(
     if (c.name === '') continue
     if (!seen.has(c.name)) seen.set(c.name, `${c.name}=${c.value}`)
   }
-  return [...seen.values()].join('; ')
+  /**
+   * 关键 Cookie 前置（2026-11-11）：网关对超长 Cookie 头只取前段，
+   * 丢的是**末尾**。`_m_h5_tk` / `cookie2` 这类鉴权项若排在后面，
+   * 服务端看到的就是「没有 token / 会话无效」，表现为 SESSION_EXPIRED
+   * 这种与真实状态不符的错误。淘宝分区有近 40 个 Cookie，必须显式前置。
+   */
+  const out: string[] = []
+  for (const name of prefer) {
+    const pair = seen.get(name)
+    if (!pair) continue
+    out.push(pair)
+    seen.delete(name)
+  }
+  out.push(...seen.values())
+  return out.join('; ')
 }
 
 /**
