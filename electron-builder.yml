@@ -33,6 +33,8 @@ directories:
 files:
   - out/**/*
   - package.json
+  # 主窗口显式带的任务栏图标（src/main/index.ts 的 windowIcon）；ICO 只给 exe 用，不进包
+  - build/icons/icon-256.png
   - '!**/*.map'
   # exceljs 的 dist/ 是浏览器 bundle（6.1MB），Node 入口走 excel.js → lib/，运行时不加载。
   - '!node_modules/exceljs/dist/**'

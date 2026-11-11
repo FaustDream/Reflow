@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, session } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, session, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupCaptureBridge } from './capture-bridge'
@@ -137,6 +137,22 @@ function bootstrap(): void {
   registerIpc()
 }
 
+/**
+ * 窗口图标。
+ *
+ * Windows 的任务栏按钮优先用窗口自己带的 HICON，拿不到才回落到 exe 内嵌图标。
+ * exe 图标由 electron-builder 从 build/icons/reflow.ico 写入；这里再显式给一份，
+ * 一是 Explorer 图标缓存可能还留着旧图标（表现为通用「空白文件」），
+ * 二是窗口图标不经 shell 的 exe 图标查找，能绕开这份缓存。
+ *
+ * 图片随包放在 app.asar/build/icons/ 下（见 electron-builder.yml 的 files）；
+ * 源码运行时 app.getAppPath() 就是仓库根目录，同一路径也成立。
+ */
+function windowIcon(): Electron.NativeImage | undefined {
+  const img = nativeImage.createFromPath(join(app.getAppPath(), 'build', 'icons', 'icon-256.png'))
+  return img.isEmpty() ? undefined : img
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -147,6 +163,7 @@ function createWindow(): void {
     // Web 调试模式：窗口纯当后台用（webview/事件源），UI 在浏览器里
     skipTaskbar: webBridgeMode,
     title: 'Reflow',
+    icon: windowIcon(),
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
