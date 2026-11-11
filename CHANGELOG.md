@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### 变更
+
+- **发版只出 Windows**：发布流水线收敛为单一平台，推 tag 只构建 Windows 安装包与免安装版；mac / linux 的 electron-builder 配置与 `build:mac`、`build:linux` 脚本保留在本机使用，不进 Release。v1.0.0 与 v1.0.1 已发布的 mac / linux 产物同时下架（已下载的副本不受影响）。
+
 ## [1.0.1] - 2026-11-11
 
 ### 缺陷修复

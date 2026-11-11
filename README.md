@@ -19,18 +19,15 @@ Local-first order aggregation for Chinese e-commerce accounts. Runs on your mach
 
 ## Install
 
-Grab the package for your system from [Releases](https://github.com/FaustDream/Reflow/releases/latest):
+Grab the installer from [Releases](https://github.com/FaustDream/Reflow/releases/latest):
 
 | System | Download |
 |---|---|
-| Windows 10/11 | `Reflow-1.0.0-win-x64.exe` (installer) or `Reflow-1.0.0-portable.exe` (no install) |
-| macOS | `Reflow-1.0.0-mac-arm64.dmg` (Apple Silicon) or `Reflow-1.0.0-mac-x64.dmg` (Intel) |
-| Linux | `Reflow-1.0.0-linux-*.AppImage` (universal) or `*.deb` (Debian / Ubuntu) |
+| Windows 10/11 | `Reflow-1.0.1-win-x64.exe` (installer) or `Reflow-1.0.1-portable.exe` (no install) |
 
 The builds are **unsigned**, so the OS will block the first launch. That is expected:
 
 - **Windows**: SmartScreen says "Windows protected your PC" → *More info* → *Run anyway*.
-- **macOS**: right-click the app and choose *Open*, or `xattr -dr com.apple.quarantine "/Applications/Reflow.app"`.
 
 Verify integrity against `SHA256SUMS.txt` in the same release (`certutil -hashfile <file> SHA256` on Windows).
 
@@ -121,6 +118,8 @@ npm run build:linux    # Linux AppImage + deb (must run on Linux)
 ```
 
 Artifacts land in `dist-release/`. macOS builds get an ad-hoc signature so they actually launch on Apple Silicon.
+
+The release pipeline builds Windows only: pushing a tag produces the installer and the portable exe. The mac/linux commands stay for local use and are not uploaded to a release.
 
 ## Data & privacy
 

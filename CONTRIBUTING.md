@@ -44,7 +44,7 @@ npm run build:linux    # 须在 Linux 上执行
 
 1. 改 `package.json` 的 `version`，在 `CHANGELOG.md` 顶部把 `Unreleased` 段整理成该版本并补日期。
 2. 提交并推 tag：`git tag v1.0.0 && git push origin v1.0.0`。
-3. `.github/workflows/release.yml` 会校验 tag 与 `package.json` 是否一致，然后构建三平台产物、生成 `SHA256SUMS.txt`、按 CHANGELOG 生成说明并创建 Release。
+3. `.github/workflows/release.yml` 会校验 tag 与 `package.json` 是否一致，然后构建 Windows 产物（安装包 + 免安装版）、生成 `SHA256SUMS.txt`、按 CHANGELOG 生成说明并创建 Release。mac/linux 的打包脚本保留在本机使用，不进发布流水线。
 
 ## 四、提 PR 之前
 

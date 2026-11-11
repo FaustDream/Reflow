@@ -45,19 +45,14 @@ const body = section.replace(/^##\s+(.*)$/m, (_, title) => `### ${title.replace(
 
 process.stdout.write(`${body}
 
-### 下载哪个
+### 下载
 
 | 你的系统 | 选这个 |
 |---|---|
 | Windows 10/11 | \`Reflow-${version}-win-x64.exe\`（安装包）或 \`Reflow-${version}-portable.exe\`（免安装） |
-| macOS（Apple Silicon） | \`Reflow-${version}-mac-arm64.dmg\` |
-| macOS（Intel） | \`Reflow-${version}-mac-x64.dmg\` |
-| Linux（Debian / Ubuntu） | \`Reflow-${version}-linux-*.deb\` |
-| Linux（通用） | \`Reflow-${version}-linux-*.AppImage\`（chmod +x 后直接运行） |
 
 校验完整性：下载目录里附有 \`SHA256SUMS.txt\`，Windows 上 \`certutil -hashfile <文件> SHA256\` 即可比对。
 
-> 安装包未做代码签名，Windows SmartScreen 与 macOS Gatekeeper 会拦一次：
-> Windows 点「更多信息 → 仍要运行」；macOS 右键「打开」，或
-> \`xattr -dr com.apple.quarantine "/Applications/Reflow.app"\`。
+> 安装包未做代码签名，Windows SmartScreen 会拦一次：
+> 点「更多信息 → 仍要运行」。
 `)

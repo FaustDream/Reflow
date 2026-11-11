@@ -1,14 +1,14 @@
-# 发布：推 tag 即出三平台安装包并创建 GitHub Release。
+# 发布：推 tag 即出 Windows 安装包并创建 GitHub Release。
 #
 # 触发方式：
-#   1) 推 tag：`git push origin v1.0.0` → 三平台构建 + 自动创建 Release
+#   1) 推 tag：`git push origin v1.0.1` → 构建 + 自动创建 Release
 #   2) 手动：Actions → 发布 → Run workflow（只构建、产出 artifact，不发版）
 #
-# 为什么 mac/linux 必须在各自系统上构建：macOS 的 .app 要在 macOS 上打包并 ad-hoc 签名
-# （改完 bundle 不重签会被判「已损坏」），Linux 的 AppImage 需要 mksquashfs。
+# 只构建 Windows：交付形态收敛到单一平台，mac/linux 的 electron-builder 配置与
+# build:mac / build:linux 脚本保留（需要在对应系统上手动执行），但不进发布流水线。
 #
 # 版本一致性由流程保证：tag 与 package.json 不一致时直接失败，
-# 避免出现「标签 v1.0.0、包内 0.9.0」这种错位。
+# 避免出现「标签 v1.0.1、包内 1.0.0」这种错位。
 
 name: 发布
 
@@ -23,21 +23,8 @@ permissions:
 
 jobs:
   build:
-    name: ${{ matrix.label }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            label: Windows x64（安装包 + 免安装）
-            args: --win
-          - os: macos-latest
-            label: macOS（x64 + arm64）
-            args: --mac
-          - os: ubuntu-latest
-            label: Linux x64（AppImage + deb）
-            args: --linux
+    name: Windows x64（安装包 + 免安装）
+    runs-on: windows-latest
 
     env:
       ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
@@ -80,19 +67,15 @@ jobs:
         run: npx electron-vite build
 
       - name: 打包
-        run: npx electron-builder ${{ matrix.args }} --publish never
+        run: npx electron-builder --win --publish never
 
       - name: 上传产物
         uses: actions/upload-artifact@v4
         with:
-          name: reflow-${{ matrix.os }}
+          name: reflow-windows
           if-no-files-found: error
           path: |
             dist-release/*.exe
-            dist-release/*.dmg
-            dist-release/*.zip
-            dist-release/*.AppImage
-            dist-release/*.deb
 
   release:
     name: 创建 GitHub Release

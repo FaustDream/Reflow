@@ -19,18 +19,15 @@
 
 ## 下载安装
 
-到 [Releases](https://github.com/FaustDream/Reflow/releases/latest) 取对应系统的包：
+到 [Releases](https://github.com/FaustDream/Reflow/releases/latest) 取安装包：
 
 | 系统 | 下载 |
 |---|---|
-| Windows 10/11 | `Reflow-1.0.0-win-x64.exe`（安装包）或 `Reflow-1.0.0-portable.exe`（免安装） |
-| macOS | `Reflow-1.0.0-mac-arm64.dmg`（Apple Silicon）或 `Reflow-1.0.0-mac-x64.dmg`（Intel） |
-| Linux | `Reflow-1.0.0-linux-*.AppImage`（通用）或 `*.deb`（Debian / Ubuntu） |
+| Windows 10/11 | `Reflow-1.0.1-win-x64.exe`（安装包）或 `Reflow-1.0.1-portable.exe`（免安装） |
 
 安装包**未做代码签名**，首次运行会被系统拦一次，这是预期行为：
 
 - **Windows**：SmartScreen 提示「Windows 已保护你的电脑」→「更多信息」→「仍要运行」。
-- **macOS**：右键点图标选「打开」；或 `xattr -dr com.apple.quarantine "/Applications/Reflow.app"`。
 
 完整性校验：同一 Release 里附有 `SHA256SUMS.txt`，Windows 用 `certutil -hashfile <文件> SHA256` 比对即可。
 
@@ -121,6 +118,8 @@ npm run build:linux    # Linux AppImage + deb（须在 Linux 上执行）
 ```
 
 产物落在 `dist-release/`。macOS 的包会用 ad-hoc 签名兜底，保证 Apple Silicon 上能启动。
+
+发布流水线只构建 Windows：推 tag 只产出安装包与免安装版，mac/linux 两条命令保留给本机使用，产物不进 Release。
 
 ## 数据与隐私
 
