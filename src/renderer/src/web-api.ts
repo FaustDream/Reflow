@@ -234,6 +234,9 @@ const webApi: ReflowApi = {
   completeOnboarding: (platforms) => invoke<{ ok: boolean }>('onboarding:complete', { platforms }),
   resetOnboarding: () => invoke<{ ok: boolean }>('onboarding:reset'),
 
+  checkUpdate: () => invoke('update:check'),
+  getChangelog: () => invoke('update:changelog'),
+
   logs: {
     list: () => invoke<{ entries: LogEntry[]; filePath: string }>('log:list'),
     clear: () => invoke<{ ok: boolean }>('log:clear'),

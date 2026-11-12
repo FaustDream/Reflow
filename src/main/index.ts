@@ -11,6 +11,7 @@ import { warmUpLogins } from './platform/login-warmup'
 import { setupOrderCacheIpc, flushAllCache } from './cache-ipc'
 import { setupAccountsIpc } from './accounts-ipc'
 import { setupOnboardingIpc } from './onboarding'
+import { setupUpdateIpc } from './update-check'
 import { initLogging, info as logInfo, warn as logWarn } from './logging/logger'
 import { setupLoggingIpc } from './logging-ipc'
 import { traceIpc } from './logging/ipc-trace'
@@ -259,6 +260,8 @@ function registerIpc(): void {
   setupAccountsIpc({ getMainWindow: safeGetMainWindow })
   // 工单 024：首次启动引导
   setupOnboardingIpc()
+  // 检查更新 / 更新记录（2026-11-12）：比对 GitHub Release + 读随包 CHANGELOG
+  setupUpdateIpc()
 
   // 启动自愈：已登录但会话 Cookie 缺失的平台（淘宝 cookie2 这类）静默访问一次首页补种。
   // 延后几秒，别和首屏抢带宽；失败只记日志，不打断启动。

@@ -33,6 +33,9 @@ directories:
 files:
   - out/**/*
   - package.json
+  # 「工具 → 更新记录」读它（src/main/update-check.ts 的 loadChangelog）；
+  # 与 Release 说明同源，缺了界面就只剩「去项目主页看」的兜底
+  - CHANGELOG.md
   # 主窗口显式带的任务栏图标（src/main/index.ts 的 windowIcon）；ICO 只给 exe 用，不进包
   - build/icons/icon-256.png
   - '!**/*.map'

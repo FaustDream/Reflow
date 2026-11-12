@@ -13,7 +13,11 @@
         <div v-else class="logo-fallback">{{ APP_NAME }}</div>
         <div class="titles">
           <div class="name">{{ APP_NAME }}</div>
-          <div class="ver">v{{ version }}</div>
+          <div class="ver">
+            v{{ version }}
+            <span class="ver-sep">·</span>
+            <span class="ver-link" @click="checkUpdate">检查更新</span>
+          </div>
         </div>
       </div>
 
@@ -52,6 +56,7 @@ import { APP_NAME, AUTHOR, REPO_URL } from '@shared/app-meta'
 
 // 与 LoginDialog/ExportDialog 一致用 defineModel（手写 props+双 watch 是冗余写法）
 const visible = defineModel<boolean>({ required: true })
+const emit = defineEmits<{ (e: 'check-update'): void }>()
 const version = ref('—')
 const logoBroken = ref(false)
 const year = new Date().getFullYear()
@@ -73,6 +78,12 @@ watch(
 
 function openRepo(): void {
   window.open(REPO_URL, '_blank')
+}
+
+/** 检查更新：先收起关于，避免两个弹窗叠着盖两层遮罩 */
+function checkUpdate(): void {
+  visible.value = false
+  emit('check-update')
 }
 
 function onClosed(): void {
@@ -123,6 +134,20 @@ function onClosed(): void {
   font-size: 12px;
   color: var(--el-text-color-secondary);
   margin-top: 2px;
+}
+
+.ver-sep {
+  margin: 0 2px;
+  color: var(--el-text-color-placeholder);
+}
+
+.ver-link {
+  color: var(--el-color-primary);
+  cursor: pointer;
+}
+
+.ver-link:hover {
+  text-decoration: underline;
 }
 
 .desc {

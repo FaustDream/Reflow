@@ -17,7 +17,9 @@
               <el-dropdown-item command="mitm" divided>抓取通道（MITM）</el-dropdown-item>
               <el-dropdown-item command="platforms">显示的平台</el-dropdown-item>
               <el-dropdown-item command="clear" divided>清空数据</el-dropdown-item>
-              <el-dropdown-item command="about" divided>关于</el-dropdown-item>
+              <el-dropdown-item command="update" divided>检查更新</el-dropdown-item>
+              <el-dropdown-item command="changelog">更新记录</el-dropdown-item>
+              <el-dropdown-item command="about">关于</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -395,7 +397,10 @@
 
     <ExportHistoryDialog v-model="historyVisible" />
     <MitmSettingsDialog v-model="mitmVisible" />
-    <AboutDialog v-model="aboutVisible" />
+    <!-- 检查更新 / 更新记录（2026-11-12）：两个弹窗互跳，不叠着开 -->
+    <UpdateDialog v-model="updateVisible" @open-changelog="changelogVisible = true" />
+    <ChangelogDialog v-model="changelogVisible" />
+    <AboutDialog v-model="aboutVisible" @check-update="updateVisible = true" />
 
     <!-- 首屏：等历史订单全部读进内存再显示，避免先闪「暂无订单」再跳出几百条 -->
     <div v-if="ordersStore.cacheLoading" class="boot-mask">
@@ -420,6 +425,8 @@ import ComparePane from '../overview/ComparePane.vue'
 import ExportDialog from '../export/ExportDialog.vue'
 import ExportHistoryDialog from '../export/ExportHistoryDialog.vue'
 import AboutDialog from './AboutDialog.vue'
+import UpdateDialog from './UpdateDialog.vue'
+import ChangelogDialog from './ChangelogDialog.vue'
 import MitmSettingsDialog from '../settings/MitmSettingsDialog.vue'
 import { useOrdersStore } from '@renderer/stores/orders'
 import { usePlatformsStore } from '@renderer/stores/platforms'
@@ -493,6 +500,8 @@ const exportScope = ref<'current' | 'selected'>('current')
 const historyVisible = ref(false)
 const logsVisible = ref(false)
 const aboutVisible = ref(false)
+const updateVisible = ref(false)
+const changelogVisible = ref(false)
 const mitmVisible = ref(false)
 
 interface PlatformRow extends AdapterSummary {
@@ -1280,6 +1289,14 @@ async function onToolCommand(cmd: string): Promise<void> {
   }
   if (cmd === 'about') {
     aboutVisible.value = true
+    return
+  }
+  if (cmd === 'update') {
+    updateVisible.value = true
+    return
+  }
+  if (cmd === 'changelog') {
+    changelogVisible.value = true
     return
   }
 }

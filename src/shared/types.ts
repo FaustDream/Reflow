@@ -220,3 +220,41 @@ export interface LogListResult {
   /** 当前日志文件路径（界面「打开日志目录」用） */
   filePath: string
 }
+
+// ---------------------------------------------------------------------------
+// 版本检查与更新记录（2026-11-12）
+//
+// 更新来源是 GitHub Release（发版走 .github/workflows/release.yml），
+// 因此「检查更新」只做比对与提示，下载安装仍由用户手动完成 —— 安装包未签名、
+// 且提供免安装版，静默替换文件不是这里该做的事。
+// 更新记录读随包的 CHANGELOG.md，与 Release 说明同源，避免两份文案漂移。
+// ---------------------------------------------------------------------------
+
+/** 一次版本检查的结果。失败时 `ok:false`，`reason` 说明卡在哪一步 */
+export interface UpdateCheckResult {
+  ok: boolean
+  /** 当前安装版本（来自 package.json，不含前导 v） */
+  current: string
+  /** 远端最新版本（已去掉前导 v）；失败时为空 */
+  latest?: string
+  /** 是否比当前版本新 */
+  hasUpdate?: boolean
+  /** 最新版发布时间（ISO 字符串） */
+  publishedAt?: string
+  /** Release 页面地址（下载入口） */
+  releaseUrl?: string
+  /** 该版本的说明正文（markdown，已去掉「下载」区块） */
+  notes?: string
+  reason?: 'network' | 'http' | 'not-found' | 'bad-response'
+  /** 面向用户的失败描述 */
+  message?: string
+}
+
+/** 更新记录里的一个版本段落 */
+export interface ChangelogRelease {
+  version: string
+  /** YYYY-MM-DD，缺失时为空串 */
+  date: string
+  /** 按 `###` 分组；版本段落开头没有小标题的正文收在 title 为空的组里 */
+  sections: Array<{ title: string; body: string }>
+}

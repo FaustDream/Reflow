@@ -4,6 +4,7 @@ import type {
   AdapterSummary,
   CaptureEvent,
   CaptureErrorEvent,
+  ChangelogRelease,
   DeepLinkBlockedEvent,
   DetailProgressEvent,
   DetailsCompletedEvent,
@@ -18,7 +19,8 @@ import type {
   ParseErrorEvent,
   PlatformEvent,
   LogEntry,
-  LogLevel
+  LogLevel,
+  UpdateCheckResult
 } from '../shared/types'
 
 type Unsubscribe = () => void
@@ -335,6 +337,15 @@ const api = {
   // ---------------------------------------------------------------------------
   // 工单 027：自动更新
   // ---------------------------------------------------------------------------
+
+  /**
+   * 检查更新（2026-11-12）：比对 GitHub Release 的最新 tag 与当前版本。
+   * 只做「有没有新版」，不下下载、不替换文件。
+   */
+  checkUpdate: (): Promise<UpdateCheckResult> => ipcRenderer.invoke('update:check'),
+
+  /** 更新记录：随包的 CHANGELOG，按版本倒序 */
+  getChangelog: (): Promise<ChangelogRelease[]> => ipcRenderer.invoke('update:changelog'),
 
   // ---------------------------------------------------------------------------
   // 系统日志（2026-11-02）：运行日志标签页
